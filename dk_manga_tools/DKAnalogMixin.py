@@ -15,6 +15,8 @@ from .DKMaps import DKMaps
 
 from astropy.table.row import Row
 
+from marvin import config
+
 import os
 import warnings
 
@@ -1069,6 +1071,191 @@ class DKAnalogMixin():
             invalid.append(data["invalid"]["nii"].flatten())
         
         return np.array(sf), np.array(comp), np.array(liner), np.array(agn), np.array(invalid)
+
+    def downloadList(inputlist, dltype='cube', **kwargs):
+        """Download a list of MaNGA objects.
+
+        Uses sdss_access to download a list of objects
+        via rsync.  Places them in your local sas path mimicing
+        the Utah SAS.
+
+        i.e. $SAS_BASE_DIR/mangawork/manga/spectro/redux
+
+        Can download cubes, rss files, maps, modelcubes, mastar cubes,
+        png images, default maps, or the entire plate directory.
+        dltype=`dap` is a special keyword that downloads all DAP files.  It sets binmode
+        and daptype to '*'
+
+        Parameters:
+            inputlist (list):
+                Required.  A list of objects to download.  Must be a list of plate IDs,
+                plate-IFUs, or manga-ids
+            dltype ({'cube', 'maps', 'modelcube', 'dap', image', 'rss', 'mastar', 'default', 'plate'}):
+                Indicated type of object to download.  Can be any of
+                plate, cube, image, mastar, rss, map, modelcube, or default (default map).
+                If not specified, the dltype defaults to cube.
+            release (str):
+                The MPL/DR version of the data to download.
+                Defaults to Marvin config.release.
+            bintype (str):
+                The bin type of the DAP maps to download. Defaults to *
+            binmode (str):
+                The bin mode of the DAP maps to download. Defaults to *
+            n (int):
+                The plan id number [1-12] of the DAP maps to download. Defaults to *
+            daptype (str):
+                The daptype of the default map to grab.  Defaults to *
+            dir3d (str):
+                The directory where the images are located.  Either 'stack' or 'mastar'. Defaults to *
+            verbose (bool):
+                Turns on verbosity during rsync
+            limit (int):
+                A limit to the number of items to download
+            test (bool):
+                If True, tests the download path construction but does not download
+
+        Returns:
+            If test=True, returns the list of full filepaths that will be downloaded
+        """
+
+        from marvin.core.exceptions import MarvinError, MarvinUserWarning
+
+
+        try:
+            from sdss_access import RsyncAccess, AccessError
+        except ImportError:
+            RsyncAccess = None
+
+        try:
+            from sdss_access.path import Path
+        except ImportError:
+            Path = None
+
+        assert isinstance(inputlist, (list, np.ndarray)), 'inputlist must be a list or numpy array'
+
+        # Get some possible keywords
+        # Necessary rsync variables:
+        #   drpver, plate, ifu, dir3d, [mpl, dapver, bintype, n, mode]
+        verbose = kwargs.get('verbose', None)
+        as_url = kwargs.get('as_url', None)
+        release = kwargs.get('release', config.release)
+        drpver, dapver = config.lookUpVersions(release=release)
+        bintype = kwargs.get('bintype', '*')
+        binmode = kwargs.get('binmode', None)
+        daptype = kwargs.get('daptype', '*')
+        dir3d = kwargs.get('dir3d', '*')
+        n = kwargs.get('n', '*')
+        limit = kwargs.get('limit', None)
+        test = kwargs.get('test', None)
+
+        # check for sdss_access
+        if not RsyncAccess:
+            raise MarvinError('sdss_access not installed.')
+
+        # Assert correct dltype
+        dltype = 'cube' if not dltype else dltype
+        assert dltype in ['plate', 'cube', 'mastar', 'modelcube', 'dap', 'rss', 'maps', 'image',
+                          'default', 'pca_mli'], ('dltype must be one of plate, cube, mastar, '
+                                       'image, rss, maps, modelcube, dap, default')
+
+        assert binmode in [None, '*', 'MAPS', 'LOGCUBE'], 'binmode can only be *, MAPS or LOGCUBE'
+
+        # Assert correct dir3d
+        if dir3d != '*':
+            assert dir3d in ['stack', 'mastar'], 'dir3d must be either stack or mastar'
+
+        # Parse and retrieve the input type and the download type
+        idtype = parseIdentifier(inputlist[0])
+        if not idtype:
+            raise MarvinError('Input list must be a list of plates, plate-ifus, or mangaids')
+
+        # Set download type
+        if dltype == 'cube':
+            name = 'mangacube'
+        elif dltype == 'rss':
+            name = 'mangarss'
+        elif dltype == 'default':
+            name = 'mangadefault'
+        elif dltype == 'plate':
+            name = 'mangaplate'
+        elif dltype == 'maps':
+            # needs to change to include DR
+            if '4' in release:
+                name = 'mangamap'
+            else:
+                name = 'mangadap5'
+                binmode = 'MAPS'
+        elif dltype == 'modelcube':
+            name = 'mangadap5'
+            binmode = 'LOGCUBE'
+        elif dltype == 'dap':
+            name = 'mangadap5'
+            binmode = '*'
+            daptype = '*'
+        elif dltype == 'mastar':
+            name = 'mangamastar'
+        elif dltype == 'image':
+            if check_versions(drpver, 'v2_5_3'):
+                name = 'mangaimagenew'
+            else:
+                name = 'mangaimage'
+
+        # check for public release
+        is_public = 'DR' in release
+        rsync_release = release.lower() if is_public else None
+
+
+        # create rsync
+        rsync_access = RsyncAccess(label='marvin_download', verbose=verbose, public=is_public, release=rsync_release)
+        rsync_access.remote()
+
+
+        # Add objects
+        for item in inputlist:
+            if idtype == 'mangaid':
+                try:
+                    plateifu = mangaid2plateifu(item)
+                except MarvinError:
+                    plateifu = None
+                else:
+                    plateid, ifu = plateifu.split('-')
+            elif idtype == 'plateifu':
+                plateid, ifu = item.split('-')
+            elif idtype == 'plate':
+                plateid = item
+                ifu = '*'
+
+        if dltype == "pca_mli":
+            source = "rsync://sdss@dtn01.sdss.org/sas/mangawork/manga/sandbox/mangapca/zachpace/CSPs_CKC14_MaNGA_20190215-1/{0}/{1}/results/{2}-{3}/*".format(drpver, 
+                dapver, plateid, ifu)
+            location = "mangawork/manga/sandbox/mangapca/zachpace/CSPs_CKC14_MaNGA_20190215-1/{0}/{1}/results/{2}-{3}/*".format(drpver, 
+                dapver, plateid, ifu)
+
+
+            rsync_access.add(name, plate=plateid, drpver=drpver, ifu=ifu, dapver=dapver, dir3d=dir3d,
+                             mpl=release, bintype=bintype, n=n, mode=binmode, daptype=daptype)
+
+        # set the stream
+        try:
+            rsync_access.set_stream()
+        except AccessError as e:
+            raise MarvinError('Error with sdss_access rsync.set_stream. AccessError: {0}'.format(e))
+
+        # get the list and download
+        listofitems = rsync_access.get_urls() if as_url else rsync_access.get_paths()
+
+        # print download location
+        item = listofitems[0] if listofitems else None
+        if item:
+            ver = dapver if dapver in item else drpver
+            dlpath = item[:item.rfind(ver) + len(ver)]
+            if verbose:
+                print('Target download directory: {0}'.format(dlpath))
+
+        if test:
+            return listofitems
+        else:
+            rsync_access.commit(limit=limit)
 
 
 

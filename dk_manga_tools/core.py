@@ -15,6 +15,8 @@ from marvin.tools.image import Image
 from marvin.tools.maps import Maps
 from marvin.tools.cube import Cube
 
+from marvin.utils.general.general import get_drpall_table, get_drpall_table
+
 from .DKAnalogMixin import DKAnalogMixin
 
 import os
@@ -31,6 +33,8 @@ class DK_MWAnalogs(DKAnalogMixin):
         filename of DRP file
     filename_dap: 'str', optional, must be keyword
         filename of DAP file
+    no_analog: `bool`, optional, must be keyword
+        if True, only loads dap and drp tables
     drpver: 'str', optional, must be keyword
         DRP Version to load
     dapver: 'str', optional, must be keyword
@@ -46,7 +50,7 @@ class DK_MWAnalogs(DKAnalogMixin):
 
     """
 
-    def __init__(self, filename_drp = None, filename_dap = None, 
+    def __init__(self, filename_drp = None, filename_dap = None, no_analog = False,
                  drpver = None, dapver = None, latest = True,
                  filename_targets = None, filename_gz = None, sersic = False,
                  **kwargs):
@@ -93,13 +97,13 @@ class DK_MWAnalogs(DKAnalogMixin):
         try:
             self.drp = Table.read(self.filename_drp)
         except FileNotFoundError:
-            logging.warning("DRP File not found")
-            self.drp = Table()
+            logging.warning("DRP File not found, trying to download")
+            self.drp = get_drpall_table()
         try:
             self.dap = Table.read(self.filename_dap)
         except FileNotFoundError:
-            logging.warning("DAP File not found")
-            self.dap = Table()
+            logging.warning("DAP File not found, trying to download")
+            self.dap = get_dapall_table()
 
         try:
             self.targets = Table.read(self.filename_targets)
@@ -113,204 +117,207 @@ class DK_MWAnalogs(DKAnalogMixin):
             logging.warning("Galaxy Zoo Morphology Data File not found")
             self.gz = Table()
 
-        self.sersic = sersic
-
-        # Set Ind Dictionary of Targets by MangaID
-        self.ind_dict_target = dict((k.rstrip(),i) for i,k in enumerate(self.targets['MANGAID']))
-
-        # Set some Milky Way Stellar Mass Estimates
-        self.mw_stellar_mass = 6.43 * 10**10 * u.solMass
-        self.mw_stellar_mass_err = 0.63 * 10**10 * u.solMass
-
-        self.mw_stellar_mass_jbh = 5.0 * 10**10 * u.solMass
-        self.mw_stellar_mass_jbh_err = 1.0 * 10**10 * u.solMass
+        if not no_analog:
 
 
-        self.targets_gz = self.targets_in_gz()
+            self.sersic = sersic
 
-        if latest:
-            self.barred_targets_mask = self.get_barred_galaxies_mask()
-            self.nonbarred_targets_mask = self.get_nonbarred_galaxies_mask()
+            # Set Ind Dictionary of Targets by MangaID
+            self.ind_dict_target = dict((k.rstrip(),i) for i,k in enumerate(self.targets['MANGAID']))
 
-            # At least Green Valley Selection
-            # Set Color Keys:
-            color_keys = ["F", "N", "u", "g", "r", "i", "z"]
+            # Set some Milky Way Stellar Mass Estimates
+            self.mw_stellar_mass = 6.43 * 10**10 * u.solMass
+            self.mw_stellar_mass_err = 0.63 * 10**10 * u.solMass
 
-            # Cosmology Correction
-            h = 1*u.mag* u.littleh
-            cor = 5.* np.log10(h.to(u.mag,u.with_H0(WMAP9.H0)).value) * u.mag
-
-            barred_targets_phot = Table(
-                self.targets_gz[self.barred_targets_mask]['NSA_ELPETRO_ABSMAG'] * u.mag + cor, 
-                names = color_keys
-            )
-
-            nonbarred_targets_phot = Table(
-                self.targets_gz[self.nonbarred_targets_mask]['NSA_ELPETRO_ABSMAG'] * u.mag + cor, 
-                names = color_keys
-            )
-
-            # Remove Red Galaxies with NUV - r > 5
-            self.barred_targets_full = self.targets_gz[self.barred_targets_mask][(barred_targets_phot["N"] - barred_targets_phot["r"]) <= 5]
-            self.nonbarred_targets_full = self.targets_gz[self.nonbarred_targets_mask][(nonbarred_targets_phot["N"] - nonbarred_targets_phot["r"]) <= 5]
+            self.mw_stellar_mass_jbh = 5.0 * 10**10 * u.solMass
+            self.mw_stellar_mass_jbh_err = 1.0 * 10**10 * u.solMass
 
 
-            # Stellar Masses
-            self.barred_targets_stellar_mass = (10**(self.barred_targets_full["NSA_ELPETRO_MASS"]) *\
-                                        u.solMass* u.littleh**-2).to(u.solMass, u.with_H0(WMAP9.H0))
+            self.targets_gz = self.targets_in_gz()
 
-            self.nonbarred_targets_stellar_mass = (10**(self.nonbarred_targets_full["NSA_ELPETRO_MASS"]) *\
-                                        u.solMass* u.littleh**-2).to(u.solMass, u.with_H0(WMAP9.H0))
+            if latest:
+                self.barred_targets_mask = self.get_barred_galaxies_mask()
+                self.nonbarred_targets_mask = self.get_nonbarred_galaxies_mask()
 
+                # At least Green Valley Selection
+                # Set Color Keys:
+                color_keys = ["F", "N", "u", "g", "r", "i", "z"]
 
-            #Get closest nonbarred galaxy by mass for each barred galaxy
-            all_gals_drawn = []
-            for gal_mass in self.barred_targets_stellar_mass:
-                dif = (np.log10(gal_mass.value) - 
-                   np.log10(self.nonbarred_targets_stellar_mass.value))
-                ind = np.argsort(np.abs(dif))
-                added = False
-                ell = 0
-                while not added:
-                    if ind[ell] not in all_gals_drawn:
-                        all_gals_drawn.append(ind[ell])
-                        added = True
-                    else:
-                        ell += 1 
+                # Cosmology Correction
+                h = 1*u.mag* u.littleh
+                cor = 5.* np.log10(h.to(u.mag,u.with_H0(WMAP9.H0)).value) * u.mag
 
+                barred_targets_phot = Table(
+                    self.targets_gz[self.barred_targets_mask]['NSA_ELPETRO_ABSMAG'] * u.mag + cor, 
+                    names = color_keys
+                )
 
-            self.nonbarred_targets_selected = self.nonbarred_targets_full[all_gals_drawn]
-            self.nonbarred_targets_selected_stellar_mass = self.nonbarred_targets_stellar_mass[all_gals_drawn]
+                nonbarred_targets_phot = Table(
+                    self.targets_gz[self.nonbarred_targets_mask]['NSA_ELPETRO_ABSMAG'] * u.mag + cor, 
+                    names = color_keys
+                )
 
-            barred_IDs = [mangaid.decode("utf-8").rstrip() for mangaid in self.barred_targets_full["MANGAID"].data]
-            nonbarred_IDs = [mangaid.decode("utf-8").rstrip() for mangaid in 
-                             self.nonbarred_targets_selected["MANGAID"].data]
-            ind_dict_drp = dict((k,i) for i,k in enumerate(self.drp['mangaid']))
-            barred_in_drp = set(ind_dict_drp).intersection(barred_IDs)
-            bar_in_drp_ind = [ind_dict_drp[x] for x in barred_in_drp]
-            nonbarred_in_drp = set(ind_dict_drp).intersection(nonbarred_IDs)
-            nonbar_in_drp_ind = [ind_dict_drp[x] for x in nonbarred_in_drp]
-            barred_plateifus = [plateifu.decode("utf").rstrip() for plateifu in self.drp[bar_in_drp_ind]["plateifu"].data]
-            nonbarred_plateifus = [plateifu.decode("utf").rstrip() for plateifu in self.drp[nonbar_in_drp_ind]["plateifu"].data]
-            ind_dict_dap = dict((k,i) for i,k in enumerate(self.dap['PLATEIFU']))
+                # Remove Red Galaxies with NUV - r > 5
+                self.barred_targets_full = self.targets_gz[self.barred_targets_mask][(barred_targets_phot["N"] - barred_targets_phot["r"]) <= 5]
+                self.nonbarred_targets_full = self.targets_gz[self.nonbarred_targets_mask][(nonbarred_targets_phot["N"] - nonbarred_targets_phot["r"]) <= 5]
 
 
-            barred_sample_dap_ind = np.array([ind_dict_dap[plateifu] for plateifu in barred_plateifus])
-            nonbarred_sample_dap_ind = np.array([ind_dict_dap[plateifu] for plateifu in nonbarred_plateifus])
-            if config.release == "MPL-8":
-	            bad_barred_ind = ind_dict_dap["10507-12705"]
-	            good_barred_mask = np.array([ind != bad_barred_ind for ind in barred_sample_dap_ind])
-	            barred_sample_dap_ind = barred_sample_dap_ind[good_barred_mask]
+                # Stellar Masses
+                self.barred_targets_stellar_mass = (10**(self.barred_targets_full["NSA_ELPETRO_MASS"]) *\
+                                            u.solMass* u.littleh**-2).to(u.solMass, u.with_H0(WMAP9.H0))
 
-	            bad_nonbarred_inds = [ind_dict_dap[bad] for bad in ["8332-12704", "8616-3704", "10498-12704"]]
-	            good_nonbarred_mask = np.array([ind not in bad_nonbarred_inds for ind in nonbarred_sample_dap_ind])
-	            nonbarred_sample_dap_ind = nonbarred_sample_dap_ind[good_nonbarred_mask]
-
-            self.barred_sample = self.dap[barred_sample_dap_ind]
-            self.nonbarred_sample = self.dap[nonbarred_sample_dap_ind]
-
-            argsort = np.argsort(self.barred_sample["NSA_Z"])
-            self.barred_sample = self.barred_sample[argsort]
-            argsort = np.argsort(self.nonbarred_sample["NSA_Z"])
-            self.nonbarred_sample = self.nonbarred_sample[argsort]
-            
+                self.nonbarred_targets_stellar_mass = (10**(self.nonbarred_targets_full["NSA_ELPETRO_MASS"]) *\
+                                            u.solMass* u.littleh**-2).to(u.solMass, u.with_H0(WMAP9.H0))
 
 
-            self.barred_stellar_mass = (self.drp[self.barred_sample["DRPALLINDX"]]["nsa_elpetro_mass"] *\
-                                        u.solMass* u.littleh**-2).to(u.solMass, u.with_H0(WMAP9.H0))
-            self.nonbarred_stellar_mass = (self.drp[self.nonbarred_sample["DRPALLINDX"]]["nsa_elpetro_mass"] *\
-                                        u.solMass* u.littleh**-2).to(u.solMass, u.with_H0(WMAP9.H0))
-
-            self.in_mass_range_barred = self.barred_stellar_mass <= (self.mw_stellar_mass + self.mw_stellar_mass_err * 2.5)
-            self.in_mass_range_barred &= self.barred_stellar_mass > self.mw_stellar_mass - self.mw_stellar_mass_err * 2.5
-
-            self.in_mass_range_nonbarred = self.nonbarred_stellar_mass <= self.mw_stellar_mass + self.mw_stellar_mass_err * 2.5
-            self.in_mass_range_nonbarred &= self.nonbarred_stellar_mass > self.mw_stellar_mass - self.mw_stellar_mass_err * 2.5
-
-            self.dk_sample = self.barred_sample[self.in_mass_range_barred]
-            self.dk_sample_nobar = self.nonbarred_sample[self.in_mass_range_nonbarred]
-
-            self.barred_sfr = (self.barred_sample["SFR_TOT"] * u.solMass / u.yr * u.littleh**-2).to(u.solMass / u.yr, u.with_H0(WMAP9.H0))
-            self.nonbarred_sfr = (self.nonbarred_sample["SFR_TOT"] * u.solMass / u.yr * u.littleh**-2).to(u.solMass / u.yr, u.with_H0(WMAP9.H0))
-
-            self.dk_sample_sfr = self.barred_sfr[self.in_mass_range_barred]
-            self.dk_sample_nobar_sfr = self.nonbarred_sfr[self.in_mass_range_nonbarred]
-
-            self.barred_sfr_1re = (self.barred_sample["SFR_1RE"] * u.solMass / u.yr * u.littleh**-2).to(u.solMass / u.yr, u.with_H0(WMAP9.H0))
-            self.nonbarred_sfr_1re = (self.nonbarred_sample["SFR_1RE"] * u.solMass / u.yr * u.littleh**-2).to(u.solMass / u.yr, u.with_H0(WMAP9.H0))
-
-            self.dk_sample_sfr_1re = self.barred_sfr_1re[self.in_mass_range_barred]
-            self.dk_sample_nobar_sfr_1re = self.nonbarred_sfr_1re[self.in_mass_range_nonbarred]
-
-        else:
-
-            # Set Full Barred and Unbarred Sample
-            self.barred_sample = self.get_barred_galaxies_dap()
-            argsort = np.argsort(self.barred_sample["NSA_Z"])
-            self.barred_sample = self.barred_sample[argsort]
-            self.nonbarred_sample = self.get_barred_galaxies_dap(nonbarred = True)
-            argsort = np.argsort(self.nonbarred_sample["NSA_Z"])
-            self.nonbarred_sample = self.nonbarred_sample[argsort]
+                #Get closest nonbarred galaxy by mass for each barred galaxy
+                all_gals_drawn = []
+                for gal_mass in self.barred_targets_stellar_mass:
+                    dif = (np.log10(gal_mass.value) - 
+                       np.log10(self.nonbarred_targets_stellar_mass.value))
+                    ind = np.argsort(np.abs(dif))
+                    added = False
+                    ell = 0
+                    while not added:
+                        if ind[ell] not in all_gals_drawn:
+                            all_gals_drawn.append(ind[ell])
+                            added = True
+                        else:
+                            ell += 1 
 
 
-            # At least Green Valley Selection
-            # Set Color Keys:
-            color_keys = ["F", "N", "u", "g", "r", "i", "z"]
+                self.nonbarred_targets_selected = self.nonbarred_targets_full[all_gals_drawn]
+                self.nonbarred_targets_selected_stellar_mass = self.nonbarred_targets_stellar_mass[all_gals_drawn]
 
-            # Cosmology Correction
-            h = 1*u.mag* u.littleh
-            cor = 5.* np.log10(h.to(u.mag,u.with_H0(WMAP9.H0)).value) * u.mag
+                barred_IDs = [mangaid.decode("utf-8").rstrip() for mangaid in self.barred_targets_full["MANGAID"].data]
+                nonbarred_IDs = [mangaid.decode("utf-8").rstrip() for mangaid in 
+                                 self.nonbarred_targets_selected["MANGAID"].data]
+                ind_dict_drp = dict((k,i) for i,k in enumerate(self.drp['mangaid']))
+                barred_in_drp = set(ind_dict_drp).intersection(barred_IDs)
+                bar_in_drp_ind = [ind_dict_drp[x] for x in barred_in_drp]
+                nonbarred_in_drp = set(ind_dict_drp).intersection(nonbarred_IDs)
+                nonbar_in_drp_ind = [ind_dict_drp[x] for x in nonbarred_in_drp]
+                barred_plateifus = [plateifu.decode("utf").rstrip() for plateifu in self.drp[bar_in_drp_ind]["plateifu"].data]
+                nonbarred_plateifus = [plateifu.decode("utf").rstrip() for plateifu in self.drp[nonbar_in_drp_ind]["plateifu"].data]
+                ind_dict_dap = dict((k,i) for i,k in enumerate(self.dap['PLATEIFU']))
 
-            barred_sample_phot = Table(
-                self.drp[self.barred_sample["DRPALLINDX"]]['nsa_elpetro_absmag'] * u.mag + cor, 
-                names = color_keys
-            )
 
-            nonbarred_sample_phot = Table(
-                self.drp[self.nonbarred_sample["DRPALLINDX"]]['nsa_elpetro_absmag'] * u.mag + cor, 
-                names = color_keys
-            )
+                barred_sample_dap_ind = np.array([ind_dict_dap[plateifu] for plateifu in barred_plateifus])
+                nonbarred_sample_dap_ind = np.array([ind_dict_dap[plateifu] for plateifu in nonbarred_plateifus])
+                if config.release == "MPL-8":
+    	            bad_barred_ind = ind_dict_dap["10507-12705"]
+    	            good_barred_mask = np.array([ind != bad_barred_ind for ind in barred_sample_dap_ind])
+    	            barred_sample_dap_ind = barred_sample_dap_ind[good_barred_mask]
 
-            # Remove Red Galaxies with NUV - r > 5
-            self.barred_sample = self.barred_sample[(barred_sample_phot["N"] - barred_sample_phot["r"]) <= 5]
-            self.nonbarred_sample = self.nonbarred_sample[(nonbarred_sample_phot["N"] - nonbarred_sample_phot["r"]) <= 5]
+    	            bad_nonbarred_inds = [ind_dict_dap[bad] for bad in ["8332-12704", "8616-3704", "10498-12704"]]
+    	            good_nonbarred_mask = np.array([ind not in bad_nonbarred_inds for ind in nonbarred_sample_dap_ind])
+    	            nonbarred_sample_dap_ind = nonbarred_sample_dap_ind[good_nonbarred_mask]
 
-            # Stellar Masses
-            self.barred_stellar_mass = (self.drp[self.barred_sample["DRPALLINDX"]]["nsa_elpetro_mass"] * \
-                  u.solMass* u.littleh**-2).to(u.solMass, u.with_H0(WMAP9.H0))
-            self.nonbarred_stellar_mass = (self.drp[self.nonbarred_sample["DRPALLINDX"]]["nsa_elpetro_mass"] * \
-                  u.solMass* u.littleh**-2).to(u.solMass, u.with_H0(WMAP9.H0))
+                self.barred_sample = self.dap[barred_sample_dap_ind]
+                self.nonbarred_sample = self.dap[nonbarred_sample_dap_ind]
 
-            # Mass Selections
-            self.in_mass_range_barred = self.barred_stellar_mass <= self.mw_stellar_mass + self.mw_stellar_mass_err
-            self.in_mass_range_barred &= self.barred_stellar_mass > self.mw_stellar_mass - self.mw_stellar_mass_err
+                argsort = np.argsort(self.barred_sample["NSA_Z"])
+                self.barred_sample = self.barred_sample[argsort]
+                argsort = np.argsort(self.nonbarred_sample["NSA_Z"])
+                self.nonbarred_sample = self.nonbarred_sample[argsort]
+                
 
-            self.in_mass_range_nonbarred = self.nonbarred_stellar_mass <= self.mw_stellar_mass + self.mw_stellar_mass_err
-            self.in_mass_range_nonbarred &= self.nonbarred_stellar_mass > self.mw_stellar_mass - self.mw_stellar_mass_err
 
-            #JBH
-            self.in_mass_range_barred_jbh = self.barred_stellar_mass <= self.mw_stellar_mass_jbh + self.mw_stellar_mass_jbh_err
-            self.in_mass_range_barred_jbh &= self.barred_stellar_mass > self.mw_stellar_mass_jbh - self.mw_stellar_mass_jbh_err
+                self.barred_stellar_mass = (self.drp[self.barred_sample["DRPALLINDX"]]["nsa_elpetro_mass"] *\
+                                            u.solMass* u.littleh**-2).to(u.solMass, u.with_H0(WMAP9.H0))
+                self.nonbarred_stellar_mass = (self.drp[self.nonbarred_sample["DRPALLINDX"]]["nsa_elpetro_mass"] *\
+                                            u.solMass* u.littleh**-2).to(u.solMass, u.with_H0(WMAP9.H0))
 
-            self.in_mass_range_nonbarred_jbh = self.nonbarred_stellar_mass <= self.mw_stellar_mass_jbh + self.mw_stellar_mass_jbh_err
-            self.in_mass_range_nonbarred_jbh &= self.nonbarred_stellar_mass > self.mw_stellar_mass_jbh - self.mw_stellar_mass_jbh_err
+                self.in_mass_range_barred = self.barred_stellar_mass <= (self.mw_stellar_mass + self.mw_stellar_mass_err * 2.5)
+                self.in_mass_range_barred &= self.barred_stellar_mass > self.mw_stellar_mass - self.mw_stellar_mass_err * 2.5
 
-            self.dk_sample = self.barred_sample[self.in_mass_range_barred]
-            self.dk_sample_nobar = self.nonbarred_sample[self.in_mass_range_nonbarred]
+                self.in_mass_range_nonbarred = self.nonbarred_stellar_mass <= self.mw_stellar_mass + self.mw_stellar_mass_err * 2.5
+                self.in_mass_range_nonbarred &= self.nonbarred_stellar_mass > self.mw_stellar_mass - self.mw_stellar_mass_err * 2.5
 
-            #JBH
-            self.dk_sample_jbh = self.barred_sample[self.in_mass_range_barred_jbh]
-            self.dk_sample_jbh_nobar = self.nonbarred_sample[self.in_mass_range_nonbarred_jbh]
+                self.dk_sample = self.barred_sample[self.in_mass_range_barred]
+                self.dk_sample_nobar = self.nonbarred_sample[self.in_mass_range_nonbarred]
 
-            #SFR
-            self.barred_sfr = (self.barred_sample["SFR_TOT"] * u.solMass / u.yr * u.littleh**-2).to(u.solMass / u.yr, u.with_H0(WMAP9.H0))
-            self.nonbarred_sfr = (self.nonbarred_sample["SFR_TOT"] * u.solMass / u.yr * u.littleh**-2).to(u.solMass / u.yr, u.with_H0(WMAP9.H0))
+                self.barred_sfr = (self.barred_sample["SFR_TOT"] * u.solMass / u.yr * u.littleh**-2).to(u.solMass / u.yr, u.with_H0(WMAP9.H0))
+                self.nonbarred_sfr = (self.nonbarred_sample["SFR_TOT"] * u.solMass / u.yr * u.littleh**-2).to(u.solMass / u.yr, u.with_H0(WMAP9.H0))
 
-            self.dk_sample_sfr = self.barred_sfr[self.in_mass_range_barred]
-            self.dk_sample_nobar_sfr = self.nonbarred_sfr[self.in_mass_range_nonbarred]
+                self.dk_sample_sfr = self.barred_sfr[self.in_mass_range_barred]
+                self.dk_sample_nobar_sfr = self.nonbarred_sfr[self.in_mass_range_nonbarred]
 
-            self.dk_sample_jbh_sfr = self.barred_sfr[self.in_mass_range_barred_jbh]
-            self.dk_sample_jbh_nobar_sfr = self.nonbarred_sfr[self.in_mass_range_nonbarred_jbh]
+                self.barred_sfr_1re = (self.barred_sample["SFR_1RE"] * u.solMass / u.yr * u.littleh**-2).to(u.solMass / u.yr, u.with_H0(WMAP9.H0))
+                self.nonbarred_sfr_1re = (self.nonbarred_sample["SFR_1RE"] * u.solMass / u.yr * u.littleh**-2).to(u.solMass / u.yr, u.with_H0(WMAP9.H0))
+
+                self.dk_sample_sfr_1re = self.barred_sfr_1re[self.in_mass_range_barred]
+                self.dk_sample_nobar_sfr_1re = self.nonbarred_sfr_1re[self.in_mass_range_nonbarred]
+
+            else:
+
+                # Set Full Barred and Unbarred Sample
+                self.barred_sample = self.get_barred_galaxies_dap()
+                argsort = np.argsort(self.barred_sample["NSA_Z"])
+                self.barred_sample = self.barred_sample[argsort]
+                self.nonbarred_sample = self.get_barred_galaxies_dap(nonbarred = True)
+                argsort = np.argsort(self.nonbarred_sample["NSA_Z"])
+                self.nonbarred_sample = self.nonbarred_sample[argsort]
+
+
+                # At least Green Valley Selection
+                # Set Color Keys:
+                color_keys = ["F", "N", "u", "g", "r", "i", "z"]
+
+                # Cosmology Correction
+                h = 1*u.mag* u.littleh
+                cor = 5.* np.log10(h.to(u.mag,u.with_H0(WMAP9.H0)).value) * u.mag
+
+                barred_sample_phot = Table(
+                    self.drp[self.barred_sample["DRPALLINDX"]]['nsa_elpetro_absmag'] * u.mag + cor, 
+                    names = color_keys
+                )
+
+                nonbarred_sample_phot = Table(
+                    self.drp[self.nonbarred_sample["DRPALLINDX"]]['nsa_elpetro_absmag'] * u.mag + cor, 
+                    names = color_keys
+                )
+
+                # Remove Red Galaxies with NUV - r > 5
+                self.barred_sample = self.barred_sample[(barred_sample_phot["N"] - barred_sample_phot["r"]) <= 5]
+                self.nonbarred_sample = self.nonbarred_sample[(nonbarred_sample_phot["N"] - nonbarred_sample_phot["r"]) <= 5]
+
+                # Stellar Masses
+                self.barred_stellar_mass = (self.drp[self.barred_sample["DRPALLINDX"]]["nsa_elpetro_mass"] * \
+                      u.solMass* u.littleh**-2).to(u.solMass, u.with_H0(WMAP9.H0))
+                self.nonbarred_stellar_mass = (self.drp[self.nonbarred_sample["DRPALLINDX"]]["nsa_elpetro_mass"] * \
+                      u.solMass* u.littleh**-2).to(u.solMass, u.with_H0(WMAP9.H0))
+
+                # Mass Selections
+                self.in_mass_range_barred = self.barred_stellar_mass <= self.mw_stellar_mass + self.mw_stellar_mass_err
+                self.in_mass_range_barred &= self.barred_stellar_mass > self.mw_stellar_mass - self.mw_stellar_mass_err
+
+                self.in_mass_range_nonbarred = self.nonbarred_stellar_mass <= self.mw_stellar_mass + self.mw_stellar_mass_err
+                self.in_mass_range_nonbarred &= self.nonbarred_stellar_mass > self.mw_stellar_mass - self.mw_stellar_mass_err
+
+                #JBH
+                self.in_mass_range_barred_jbh = self.barred_stellar_mass <= self.mw_stellar_mass_jbh + self.mw_stellar_mass_jbh_err
+                self.in_mass_range_barred_jbh &= self.barred_stellar_mass > self.mw_stellar_mass_jbh - self.mw_stellar_mass_jbh_err
+
+                self.in_mass_range_nonbarred_jbh = self.nonbarred_stellar_mass <= self.mw_stellar_mass_jbh + self.mw_stellar_mass_jbh_err
+                self.in_mass_range_nonbarred_jbh &= self.nonbarred_stellar_mass > self.mw_stellar_mass_jbh - self.mw_stellar_mass_jbh_err
+
+                self.dk_sample = self.barred_sample[self.in_mass_range_barred]
+                self.dk_sample_nobar = self.nonbarred_sample[self.in_mass_range_nonbarred]
+
+                #JBH
+                self.dk_sample_jbh = self.barred_sample[self.in_mass_range_barred_jbh]
+                self.dk_sample_jbh_nobar = self.nonbarred_sample[self.in_mass_range_nonbarred_jbh]
+
+                #SFR
+                self.barred_sfr = (self.barred_sample["SFR_TOT"] * u.solMass / u.yr * u.littleh**-2).to(u.solMass / u.yr, u.with_H0(WMAP9.H0))
+                self.nonbarred_sfr = (self.nonbarred_sample["SFR_TOT"] * u.solMass / u.yr * u.littleh**-2).to(u.solMass / u.yr, u.with_H0(WMAP9.H0))
+
+                self.dk_sample_sfr = self.barred_sfr[self.in_mass_range_barred]
+                self.dk_sample_nobar_sfr = self.nonbarred_sfr[self.in_mass_range_nonbarred]
+
+                self.dk_sample_jbh_sfr = self.barred_sfr[self.in_mass_range_barred_jbh]
+                self.dk_sample_jbh_nobar_sfr = self.nonbarred_sfr[self.in_mass_range_nonbarred_jbh]
 
 
 

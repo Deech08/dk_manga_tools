@@ -15,7 +15,7 @@ from marvin.tools.image import Image
 from marvin.tools.maps import Maps
 from marvin.tools.cube import Cube
 
-from marvin.utils.general.general import get_drpall_table, get_drpall_table
+from marvin.utils.general.general import get_drpall_table, get_dapall_file
 
 from .DKAnalogMixin import DKAnalogMixin
 
@@ -103,7 +103,8 @@ class DK_MWAnalogs(DKAnalogMixin):
             self.dap = Table.read(self.filename_dap)
         except FileNotFoundError:
             logging.warning("DAP File not found, trying to download")
-            self.dap = get_dapall_table()
+            self.filename = get_dapall_file()
+            self.dap = Table.read(self.filename_dap)
 
         try:
             self.targets = Table.read(self.filename_targets)

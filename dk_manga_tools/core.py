@@ -104,7 +104,11 @@ class DK_MWAnalogs(DKAnalogMixin):
         except FileNotFoundError:
             logging.warning("DAP File not found, trying to download")
             self.filename = get_dapall_file(self.drpver, self.dapver)
-            self.dap = Table.read(self.filename_dap)
+            try:
+                self.dap = Table.read(self.filename_dap)
+            except FileNotFoundError:
+                if (self.drpver == "v2_4_e") & (self.dapver == "2.2.1"):
+                    self.dap = Table.read("https://data.sdss.org/sas/dr15/manga/spectro/analysis/v2_4_3/2.2.1/dapall-v2_4_3-2.2.1.fits")
 
         try:
             self.targets = Table.read(self.filename_targets)

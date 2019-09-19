@@ -103,7 +103,7 @@ class DK_MWAnalogs(DKAnalogMixin):
             self.dap = Table.read(self.filename_dap)
         except FileNotFoundError:
             logging.warning("DAP File not found, trying to download")
-            self.filename = get_dapall_file()
+            self.filename = get_dapall_file(self.drpver, self.dapver)
             self.dap = Table.read(self.filename_dap)
 
         try:

@@ -1072,6 +1072,44 @@ class DKAnalogMixin():
         
         return np.array(sf), np.array(comp), np.array(liner), np.array(agn), np.array(invalid)
 
+    def get_all_bar_coords(self, sample = None, bar_masks = None, **kwargs):
+        """
+        Return bar_coords from bar masks 
+
+        Parameters
+        ----------
+        sample:
+            sample to get data for
+        bar_masks: `tuple, list`
+            bar masks (flattened, same len as sample)
+
+        """
+        if sample is None:
+            sample = self.dk_sample
+
+        bar_coords = []
+
+        if sample.__class__ != Row:
+            if bar_masks is not None:
+                for plateifu, mask in zip(sample["PLATEIFU"], bar_masks):
+                    maps = DKMaps(plateifu = plateifu)
+                    bar_coords.append(maps.get_bar_coords(bar_mask = mask))
+            else:
+                for plateifu in sample["PLATEIFU"]:
+                    maps = DKMaps(plateifu = plateifu)
+                    bar_coords.append(maps.get_bar_coords(**kwargs))
+
+        else:
+            maps = DKMaps(plateifu = sameple["PLATEIFU"])
+            if bar_masks is not None:
+                bar_coords.append(maps.get_bar_coords(bar_mask = bar_masks))
+            else:
+                bar_coords.append(maps.get_bar_coords(**kwargs))
+
+        return np.array(bar_coords)
+
+    
+
     def downloadList(inputlist, dltype='cube', **kwargs):
         """Download a list of MaNGA objects.
 

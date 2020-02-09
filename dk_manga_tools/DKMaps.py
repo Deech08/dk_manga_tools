@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 
 from matplotlib.colors import ListedColormap
 
+from astropy.coordinates import CartesianRepresentation, CylindricalRepresentation
+
 pal = sns.color_palette('colorblind')
 
 from extinction import fm07 as extinction_law
@@ -24,6 +26,7 @@ import glob
 
 from .pca import PCA_stellar_mass
 from .pca import PCA_MLi
+from .pca import PCA_zpres_info
 from .gz3d_fits import gz3d_fits
 
 
@@ -511,6 +514,15 @@ class DKMapsMixin(object):
                            self.dapall["versdrp3"], self.dapall["versdap"], 'results')
         return PCA_MLi(self.dapall, pca_data_dir = pca_data_dir, **kwargs)
 
+    def get_PCA_zpres_info(self, name, pca_data_dir = None, **kwargs):
+        """
+        Return additional specified info from PCA
+        """
+        if pca_data_dir is None:
+            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'sandbox', 'mangapca', 'zachpace', 'CSPs_CKC14_MaNGA_20190215-1',
+                           self.dapall["versdrp3"], self.dapall["versdap"], 'results')
+        return PCA_zpres_info(self.dapall, name, pca_data_dir = pca_data_dir, **kwargs)
+
     def get_bar_mask(self, galaxyzoo3d_dir = None, vote_threshold = None, **kwargs):
         """
         If available get Galaxy Zoo 3D Bar Spaxel Mask
@@ -560,6 +572,7 @@ class DKMapsMixin(object):
         if snr_min is None:
             snr_min = 3.0
 
+
         m = self.getMap(*args, **kwargs)
 
         m_masked = m.masked
@@ -568,8 +581,238 @@ class DKMapsMixin(object):
         return m_masked
 
 
+    def get_bar_coords(self, bar_mask = None, **kwargs):
+        """
+        Determines bar angle based on PCA method and returns Coordinate Frame in cylindrical 
+        coordinates scaled by the bar_length
+
+        Parameters
+        ----------
+
+        bar_mask: `np.array`, optional
+            bar_mask boolean array
+            if not provided, will attempt to get
+        **kwargs:
+            passed onto self.get_bar_mask if used
+        """
+
+        if bar_mask is None:
+            bar_mask = self.get_bar_mask(**kwargs).flatten()
+
+        try:
+            assert bar_mask.sum() > 0
+        except AssertionError:
+            raise ValueError("bar_mask does not identify any spaxels in the bar!")
+
+        # Define Coordinates in Galaxy Frame
+        cyl = CylindricalRepresentation(rho = self.spx_ellcoo_r_re, 
+                                 phi = self.spx_ellcoo_elliptical_azimuth * u.deg, 
+                                 z = np.zeros_like(self.spx_ellcoo_r_re))
+        # Convert to Cartesian in Galaxy Frame
+        cart = cyl.to_cartesian()
+
+        bar_x = cart.x.flatten()[bar_mask]
+        bar_y = cart.y.flatten()[bar_mask]
+
+        # Determine Bar Angle
+        C = np.cov(np.vstack([bar_x, 
+                   bar_y]))
+        w, v = np.linalg.eig(C)
+        inx = w.argsort()[::-1]
+        w, v = w[inx], v[:, inx]
+
+        w_12 = w[:2]
+        v_12 = v[:, :2]
+
+        med_x, med_y = np.median(bar_x), np.median(bar_y)
+
+        # Check Angle Values and Fix
+        bar_angle = np.arctan2(v_12[0,1],v_12[0,0])
+        if (bar_x>med_x).sum() >= (bar_x<med_x).sum():
+            if np.median(bar_y[bar_x>med_x]) >med_y:
+                try:
+                    assert bar_angle > 0
+                except AssertionError:
+                    bar_angle *= -1
+            elif np.median(bar_y[bar_x>med_x]) < med_y:
+                try:
+                    assert bar_angle < 0
+                except AssertionError:
+                    bar_angle *= -1
+        else:
+            if np.median(bar_y[bar_x<med_x]) <med_y:
+                try:
+                    assert bar_angle > 0
+                except AssertionError:
+                    bar_angle *= -1
+            elif np.median(bar_y[bar_x<med_x]) > med_y:
+                try:
+                    assert bar_angle < 0
+                except AssertionError:
+                    bar_angle *= -1
+
+        if (np.abs(bar_angle) > np.pi/2.):
+            bar_angle = np.pi - bar_angle
+
+        # Determine New Phi-frame
+        new_phi = cyl.phi - (bar_angle) * u.rad
+
+        # Determine new r_bar rho-frame
+        bar_radius = np.max(self.spx_ellcoo_r_re.value.flatten()[bar_mask])
+        new_rho = cyl.rho / bar_radius
+
+        bar_coords = CylindricalRepresentation(rho = new_rho, phi = new_phi, z = cyl.z)
+        return bar_coords
 
 
+    def mean_intensity_v_phi(self, map_name, 
+                         bin_width_phi = None, step_size_phi = None, 
+                         min_rho = None, max_rho = None, 
+                         bar_coords = None, estimator = None, 
+                         return_errors = False, snr_min = None, 
+                         wrap = True,
+                         **kwargs):
+        """
+        Find mean intensity of specified map along bins in azimuth
+        
+        Parameters
+        ----------
+        map_name: `str`
+            name of map attribute to use
+        bin_width_phi: `u.Quantity`, `number`, optional, must be keyword
+            width of bins along azimuth angle
+            defualt units of deg
+        step_size_phi: `u.Quantity`, `number`, optional, must be keyword
+            step size along azimuth angle
+            defualt units of deg
+        min_rho: `number`, optional, must be keyword
+            minimum radius to consider 
+            default to 1 R_bar
+        max_rho: `number`, optional, must be keyword
+            maximum radius to consider
+            default to 2 R_bar
+        bar_coords: `astropy.coordinates.CylindricalRepresentation`, optional, must be keyword
+            bar coordinate frame
+            if not given, will try to get
+        estimator: `str`, optional, must be keyword
+            'mean' or 'median'
+        return_errors: `bool`, must be keyword
+            if True, also returns errors
+        snr_min: `number`, optional, must be keyword
+            min SNR to use
+            default to 3
+        wrap: `bool`, optional, must be keyword
+            if True, will only consider 0-180 degrees, wrapping
+            if False, central_phis span 0 to 360 degrees
+        kwargs:
+            passed onto get_bar_coords if used
+        """
+        if bin_width_phi is None:
+            bin_width_phi = 10 * u.deg
+        elif not hasattr(bin_width_phi, "unit"):
+            bin_width_phi *= u.deg
+            logging.warning("No units specified for bin_width_phi, assuming u.deg")
+        
+        if step_size_phi is None:
+            step_size_phi = 2.5 * u.deg
+        elif not hasattr(step_size_phi, "unit"):
+            step_size_phi *= u.deg
+            logging.warning("No units specified for step_size_phi, assuming u.deg")
+        
+        if min_rho is None:
+            min_rho = 1.2 
+        if max_rho is None:
+            max_rho = 2.
+            
+        if bar_coords is None:
+            bar_coords = self.get_bar_coords(**kwargs)
+            
+        if estimator is None:
+            estimator = "mean"
+        elif estimator not in ["mean", "median"]:
+            estimator = "mean"
+            logging.warning("estimator not recognized, using mean")
+
+        if estimator is "mean":
+            estimator_function = np.mean
+        else:
+            estimator_function = np.median
+            
+        if snr_min is None:
+            snr_min = 3.0
+
+
+        if wrap:    
+            central_phi = np.arange(0, 
+                                    180,
+                                    step_size_phi.to(u.deg).value) * u.deg
+        else:
+            central_phi = np.arange(0, 
+                                    360,
+                                    step_size_phi.to(u.deg).value) * u.deg
+        
+        # Make radial mask
+        radial_mask = bar_coords.rho < max_rho
+        radial_mask &= bar_coords.rho > min_rho
+
+        # Check map_name
+        if map_name is "stellar_mass":
+            map_data = self.get_PCA_stellar_mass()
+            map_unit = map_data.unit
+            map_data = map_data.value[0,:,:]
+        elif map_name is "smsd":
+            map_data = self.get_PCA_stellar_mass_density()
+            map_unit = map_data.unit
+            map_data = map_data.value[0,:,:]
+        elif map_name is "Av":
+            map_data = self.balmer_Av(snr_min = snr_min)
+            map_unit = 1.
+        else:
+            try:
+                # Get Map Attribute to average
+                map_data = self.get_map(map_name, snr_min = snr_min)
+                map_unit = self.datamodel["emline_gflux_ha"].unit
+            except ValueError:
+                try:
+                    map_data = self.get_PCA_zpres_info(map_name)
+                except FileNotFoundError:
+                    map_data = np.full(self.get_map("emline_gflux_ha").shape, np.nan)
+                if map_data.shape[0] == 3:
+                    map_data = map_data[0,:,:]
+                map_unit = 1.
+        
+        average_values = np.zeros_like(central_phi.value)
+        if estimator is "mean":
+            error_values = np.zeros_like(average_values)
+        else:
+            error_values = np.zeros((len(average_values),2))
+            
+        for ell, phi in enumerate(central_phi):
+            if wrap:
+                az_mask = bar_coords.phi <= phi + bin_width_phi
+                az_mask &= bar_coords.phi > phi - bin_width_phi
+                az_mask |= ((bar_coords.phi <= -180*u.deg - (phi - bin_width_phi)) & 
+                            (bar_coords.phi > -180*u.deg + (phi + bin_width_phi)))
+
+            else:
+                az_mask = bar_coords.phi.wrap_at("360d") <= phi + bin_width_phi
+                az_mask &= bar_coords.phi.wrap_at("360d") > phi - bin_width_phi
+            
+            current_mask = az_mask & radial_mask
+            
+            
+            average_values[ell] = estimator_function(map_data[current_mask])
+            if (estimator is "mean") & (return_errors):
+                error_values[ell] = np.std(map_data[current_mask])
+            elif (estimator is "median") & (return_errors):
+                error_values[ell,:] = np.percentile(map_data[current_mask].flatten(), (16,84))
+                
+        if return_errors:
+            return average_values * map_unit, central_phi, error_values * map_unit
+        else:
+            return average_values * map_unit, central_phi
+    
+    
 
 
 

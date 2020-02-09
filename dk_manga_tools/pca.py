@@ -207,6 +207,39 @@ def PCA_MLi(dapall, plateifu = None, filename = None, pca_data_dir = None):
 
     return MLi
 
+def PCA_zpres_info(dapall, name, plateifu = None, filename = None, pca_data_dir = None):
+    """
+    Return absolute Mass to Light Ratio in i-band
+
+    Parameters
+    ----------
+    dapall: 'Table', 'dict'
+        DAPALL file data
+    name: `string` or `int`
+        name or index of info to get
+        see Data model 
+        https://data.sdss.org/sas/mangawork/manga/sandbox/mangapca/zachpace/mangapca.html
+    plateifu: 'str', list, optional, must be keyword
+        plate-ifu of galaxy desired
+    filename: 'str', optional, must be keyword
+        pca data file to read in, ignores plateifu if provided
+    """
+    if filename is None:
+        if plateifu is None:
+            plateifu = dapall["plateifu"]
+        else:
+            filename = os.path.join(pca_data_dir, plateifu, "{}_zpres.fits".format(plateifu))
+
+    # Load PCA Data for Galaxy
+    if filename is None:
+        filename = os.path.join(pca_data_dir, plateifu, "{}_zpres.fits".format(plateifu))
+    with fits.open(filename) as pca_data:
+        try:
+            info = pca_data[name].data
+        except KeyError:
+            info = np.full(pca_data[1].data.shape, np.nan)
+
+    return info
 
 
 

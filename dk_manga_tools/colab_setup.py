@@ -25,7 +25,7 @@ def add_sas_path():
     envvar_handler.add_env("SAS_BASE_DIR", "/content/gdrive/My Drive/sas", overwrite=True)
     colab_env.RELOAD()
     print("Current SAS_BASE_DIR set to:")
-    !echo $SAS_BASE_DIR
+    os.system("echo $SAS_BASE_DIR")
 
 def make_netrc():
     pw = input("Enter SDSS Login Password: ")
@@ -38,7 +38,7 @@ def make_netrc():
     os.system("echo '   login sdss' >> $HOME/.netrc")
     os.system(f"echo '   password {pw}' >> $HOME/.netrc")
 
-    !chmod 600 $HOME/.netrc
+    os.system("chmod 600 $HOME/.netrc")
 
 def prepare_marvin():
     from marvin import config

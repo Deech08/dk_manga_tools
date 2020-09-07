@@ -110,7 +110,22 @@ def PCA_mag(dapall, filter_obs, plateifu = None, filename = None, vec_file = Non
     """
 
     # Check filter status
+
+    # CHECK PLATEIFU
+    if plateifu is None:
+        plateifu = dapall["plateifu"]
+
     if filter_obs.__class__ is not filters.FilterSequence:
+        if filter_obs in ["GALEX-NUV", "GALEX-FUV"]:
+            wav, resp = np.loadtxt("{}/data/GALEX_GALEX.NUV.dat".format(directory)).T
+            galex_nuv = filters.FilterResponse(
+                wavelength = wav * u.Angstrom,
+                response = resp, meta=dict(group_name='GALEX', band_name='NUV'))
+
+            wav, resp = np.loadtxt("{}/data/GALEX_GALEX.FUV.dat".format(directory)).T
+            galex_fuv = filters.FilterResponse(
+                wavelength = wav * u.Angstrom,
+                response = resp, meta=dict(group_name='GALEX', band_name='FUV'))
         try:
             filter_obs = filters.load_filters(filter_obs)
         except ValueError:
@@ -133,7 +148,8 @@ def PCA_mag(dapall, filter_obs, plateifu = None, filename = None, vec_file = Non
     return mag_abs
 
 def PCA_stellar_mass(dapall, plateifu = None, filename = None, vec_file = None, 
-                vec_data = None, pca_data_dir = None):
+                vec_data = None, pca_data_dir = None, goodfrac_channel = 2, 
+                goodfrac_thresh = .0001, use_mask = True):
     """
     Return absolute AB Magnitude in filter provided
 
@@ -170,9 +186,22 @@ def PCA_stellar_mass(dapall, plateifu = None, filename = None, vec_file = None,
         filename = os.path.join(pca_data_dir, plateifu, "{}_res.fits".format(plateifu))
     with fits.open(filename) as pca_data:
         MLi = pca_data["MLi"].data
-
+        mask = pca_data["MASK"].data.astype(bool)
+        goodfrac = pca_data["GOODFRAC"].data[goodfrac_channel]
     m_star = i_sol_lum * 10**MLi
-    return m_star * u.solMass
+    mask = mask | (goodfrac < goodfrac_thresh )
+
+    mask_shaped = np.zeros_like(m_star, dtype = bool)
+    if mask_shaped.shape[0] == 3:
+        mask_shaped[0,:,:] = mask
+        mask_shaped[1,:,:] = mask
+        mask_shaped[1,:,:] = mask
+    else:
+        mask_shaped = mask
+
+    m_star_masked = np.ma.masked_array(m_star * u.solMass, mask = mask_shaped)
+
+    return m_star_masked
 
 
 
@@ -207,7 +236,9 @@ def PCA_MLi(dapall, plateifu = None, filename = None, pca_data_dir = None):
 
     return MLi
 
-def PCA_zpres_info(dapall, name, plateifu = None, filename = None, pca_data_dir = None):
+def PCA_zpres_info(dapall, name, plateifu = None, filename = None, pca_data_dir = None, 
+    masked = True, goodfrac_channel = 2, 
+                goodfrac_thresh = .0001):
     """
     Return absolute Mass to Light Ratio in i-band
 
@@ -236,8 +267,27 @@ def PCA_zpres_info(dapall, name, plateifu = None, filename = None, pca_data_dir 
     with fits.open(filename) as pca_data:
         try:
             info = pca_data[name].data
+            if masked:
+                mask = pca_data["MASK"].data.astype(bool)
+                goodfrac = pca_data["GOODFRAC"].data[goodfrac_channel]
         except KeyError:
             info = np.full(pca_data[1].data.shape, np.nan)
+
+            if masked:
+                return np.ma.masked_array(info, mask = np.ones_like(info, dtype = bool))
+            else:
+                return info
+
+    if masked:
+        mask = mask | (goodfrac < goodfrac_thresh )
+        mask_shaped = np.zeros_like(info, dtype = bool)
+        if mask_shaped.shape[0] == 3:
+            mask_shaped[0,:,:] = mask
+            mask_shaped[1,:,:] = mask
+            mask_shaped[1,:,:] = mask
+        else:
+            mask_shaped = mask
+        info = np.ma.masked_array(info, mask = mask_shaped)
 
     return info
 

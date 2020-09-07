@@ -65,10 +65,10 @@ class gz3d_fits(object):
         self.process_spiral_classifications()
         self.process_bar_classifications()
         self.cube = None
-        if maps is None:
-            self.maps = Maps(mangaid = self.metadata['MANGAID'][0])
-        else:
-            self.maps = maps
+        # if maps is None:
+        #     self.maps = Maps(mangaid = self.metadata['MANGAID'][0])
+        # else:
+        self.maps = maps
         self.spaxel_masks = False
         self.mean_bar = None
         self.mean_spiral = None

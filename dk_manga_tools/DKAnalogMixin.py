@@ -917,11 +917,11 @@ class DKAnalogMixin():
         if sample.__class__ != Row:
             for plateifu in sample["PLATEIFU"]:
                 maps = DKMaps(plateifu = plateifu)
-                mstar = maps.get_PCA_stellar_mass(**kwargs).value
+                mstar = maps.get_PCA_stellar_mass(**kwargs)
                 data.append((mstar[0,:,:].flatten(), mstar[1,:,:].flatten(), mstar[2,:,:].flatten()))
         else:
             maps = DKMaps(plateifu = sample["PLATEIFU"])
-            mstar = maps.get_PCA_stellar_mass(**kwargs).value
+            mstar = maps.get_PCA_stellar_mass(**kwargs)
             data.append((mstar[0,:,:].flatten(), mstar[1,:,:].flatten(), mstar[2,:,:].flatten()))
         
         return np.array(data)
@@ -949,11 +949,11 @@ class DKAnalogMixin():
         if sample.__class__ != Row:
             for plateifu in sample["PLATEIFU"]:
                 maps = DKMaps(plateifu = plateifu)
-                mstar = maps.get_PCA_stellar_mass_density(**kwargs).value
+                mstar = maps.get_PCA_stellar_mass_density(**kwargs)
                 data.append((mstar[0,:,:].flatten(), mstar[1,:,:].flatten(), mstar[2,:,:].flatten()))
         else:
             maps = DKMaps(plateifu = sample["PLATEIFU"])
-            mstar = maps.get_PCA_stellar_mass_density(**kwargs).value
+            mstar = maps.get_PCA_stellar_mass_density(**kwargs)
             data.append((mstar[0,:,:].flatten(), mstar[1,:,:].flatten(), mstar[2,:,:].flatten()))
         
         return np.array(data)
@@ -1072,7 +1072,7 @@ class DKAnalogMixin():
         
         return np.array(sf), np.array(comp), np.array(liner), np.array(agn), np.array(invalid)
 
-    def get_all_bar_coords(self, sample = None, bar_masks = None, **kwargs):
+    def get_all_bar_coords(self, sample = None, bar_masks = None, flip_array = None, **kwargs):
         """
         Return bar_coords from bar masks 
 
@@ -1091,9 +1091,14 @@ class DKAnalogMixin():
 
         if sample.__class__ != Row:
             if bar_masks is not None:
-                for plateifu, mask in zip(sample["PLATEIFU"], bar_masks):
-                    maps = DKMaps(plateifu = plateifu)
-                    bar_coords.append(maps.get_bar_coords(bar_mask = mask))
+                if flip_array is not None:
+                    for plateifu, mask, flip in zip(sample["PLATEIFU"], bar_masks, flip_array):
+                        maps = DKMaps(plateifu = plateifu)
+                        bar_coords.append(maps.get_bar_coords(bar_mask = mask, flip = flip))
+                else:
+                    for plateifu, mask in zip(sample["PLATEIFU"], bar_masks):
+                        maps = DKMaps(plateifu = plateifu)
+                        bar_coords.append(maps.get_bar_coords(bar_mask = mask))
             else:
                 for plateifu in sample["PLATEIFU"]:
                     maps = DKMaps(plateifu = plateifu)
@@ -1102,7 +1107,10 @@ class DKAnalogMixin():
         else:
             maps = DKMaps(plateifu = sameple["PLATEIFU"])
             if bar_masks is not None:
-                bar_coords.append(maps.get_bar_coords(bar_mask = bar_masks))
+                if flip_array is not None:
+                    bar_coords.append(maps.get_bar_coords(bar_mask = bar_masks, flip = flip_array))
+                else:
+                    bar_coords.append(maps.get_bar_coords(bar_mask = bar_masks))
             else:
                 bar_coords.append(maps.get_bar_coords(**kwargs))
 

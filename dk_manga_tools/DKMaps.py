@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 from matplotlib.colors import ListedColormap
 
-from astropy.coordinates import CartesianRepresentation, CylindricalRepresentation
+from astropy.coordinates import CartesianRepresentation, CylindricalRepresentation, Angle
 
 pal = sns.color_palette('colorblind')
 
@@ -27,7 +27,10 @@ import glob
 from .pca import PCA_stellar_mass
 from .pca import PCA_MLi
 from .pca import PCA_zpres_info
+from .pca import PCA_mag
 from .gz3d_fits import gz3d_fits
+
+from .timeslice_utils import timecube, agemap, Total, metmap, SFH
 
 
 # Dictionary of chanell labels:
@@ -48,6 +51,74 @@ labels_dict = {
     'r_re' : r"$R / R_e$",
     'elliptical_radius' : r"Elliptical Radius ({})" 
 }
+
+from scipy.spatial import ConvexHull
+
+def minimum_bounding_rectangle(points):
+    """
+    Find the smallest bounding rectangle for a set of points.
+    Returns a set of points representing the corners of the bounding box.
+
+    :param points: an nx2 matrix of coordinates
+    :rval: an nx2 matrix of coordinates
+    """
+    from scipy.ndimage.interpolation import rotate
+    pi2 = np.pi/2.
+
+    # get the convex hull for the points
+    hull_points = points[ConvexHull(points).vertices]
+
+    # calculate edge angles
+    edges = np.zeros((len(hull_points)-1, 2))
+    edges = hull_points[1:] - hull_points[:-1]
+
+    angles = np.zeros((len(edges)))
+    angles = np.arctan2(edges[:, 1], edges[:, 0])
+
+    angles = np.abs(np.mod(angles, pi2))
+    angles = np.unique(angles)
+
+    # find rotation matrices
+    # XXX both work
+    rotations = np.vstack([
+        np.cos(angles),
+        np.cos(angles-pi2),
+        np.cos(angles+pi2),
+        np.cos(angles)]).T
+#     rotations = np.vstack([
+#         np.cos(angles),
+#         -np.sin(angles),
+#         np.sin(angles),
+#         np.cos(angles)]).T
+    rotations = rotations.reshape((-1, 2, 2))
+
+    # apply rotations to the hull
+    rot_points = np.dot(rotations, hull_points.T)
+
+    # find the bounding points
+    min_x = np.nanmin(rot_points[:, 0], axis=1)
+    max_x = np.nanmax(rot_points[:, 0], axis=1)
+    min_y = np.nanmin(rot_points[:, 1], axis=1)
+    max_y = np.nanmax(rot_points[:, 1], axis=1)
+
+    # find the box with the best area
+    areas = (max_x - min_x) * (max_y - min_y)
+    best_idx = np.argmin(areas)
+
+    # return the best box
+    x1 = max_x[best_idx]
+    x2 = min_x[best_idx]
+    y1 = max_y[best_idx]
+    y2 = min_y[best_idx]
+    r = rotations[best_idx]
+
+    rval = np.zeros((4, 2))
+    rval[0] = np.dot([x1, y2], r)
+    rval[1] = np.dot([x2, y2], r)
+    rval[2] = np.dot([x2, y1], r)
+    rval[3] = np.dot([x1, y1], r)
+
+    return rval
 
 
 class DKMapsMixin(object):
@@ -102,14 +173,14 @@ class DKMapsMixin(object):
         if not hasattr(self, name):
             raise ValueError("cannot find a good match for '{}'. Your input value is too ambiguous.".format(name))
 
-        og_map = self[name]
+        og_map = self[name].masked
 
         if Av is None:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 Av = self.balmer_Av(**kwargs)
 
-        wave = np.array([og_map.datamodel.channel.name[-4:]], dtype = np.float)
+        wave = np.array([self[name].datamodel.channel.name[-4:]], dtype = np.float)
         A_v_to_A_lambda = extinction_law(wave, 1.)
         A_lambda = Av * A_v_to_A_lambda
 
@@ -138,9 +209,12 @@ class DKMapsMixin(object):
         if deredden:
             flux = self.deredden(name, **kwargs)
         else:
-            flux = self[name]
-        lum = 4. * np.pi * flux.value * flux.unit * lum_distz**2
-        return lum.to(u.erg / u.s / u.pix, u.with_H0(WMAP9.H0))
+            flux = self[name].masked
+
+        flux_unit = self[name].unit
+        lum = 4. * np.pi * flux.data * flux_unit * lum_distz**2
+        lum_out = lum.to(u.erg / u.s / u.pix, u.with_H0(WMAP9.H0))
+        return np.ma.masked_array(data = lum_out, mask = flux.mask)
 
     def plot_bpt_nii(self, **kwargs):
         """
@@ -481,6 +555,17 @@ class DKMapsMixin(object):
                            self.dapall["versdrp3"], self.dapall["versdap"], 'results')
         return PCA_stellar_mass(self.dapall, pca_data_dir = pca_data_dir, **kwargs)
 
+    def get_timeslice_mass(self, timeslice_dir = None, **kwargs):
+        """
+        Return TimeSlice Mass Map in units of u.solMass
+        """
+        if timeslice_dir is None:
+            timeslice_dir = "/Users/dk/sas/mangawork/manga/sandbox/starlight/MPL9_Spirals_noSpecs/"
+
+        ffn = "{}{}_E-n.fits".format(timeslice_dir, self.plateifu)
+
+        tc = timecube(ffn, weight_type='current_mass')
+        return tc.sum_im * u.solMass
 
     def get_deproj_pixel_area(self):
         """
@@ -503,7 +588,51 @@ class DKMapsMixin(object):
         """
         m_star = self.get_PCA_stellar_mass(**kwargs)
         area = self.get_deproj_pixel_area()
+
+        smsd = np.ma.masked_array(data = m_star/area, mask = m_star.mask)
         return m_star / area
+
+    def get_timeslice_mass_density(self, **kwargs):
+        """
+        Return TimeSlice stellar mass / deprojected pixel area in units of u.solMass * u.pc**-2
+        """
+        m = self.get_timeslice_mass(**kwargs)
+        area = self.get_deproj_pixel_area()
+        return m/area
+
+    def get_timeslice_mean_age(self, timeslice_dir = None, weight_type = "light"):
+        """
+        Return TimeSlice mean weighted age
+        """
+        if timeslice_dir is None:
+            timeslice_dir = "/Users/dk/sas/mangawork/manga/sandbox/starlight/MPL9_Spirals_noSpecs/"
+
+        ffn = "{}{}_E-n.fits".format(timeslice_dir, self.plateifu)
+        tc = timecube(ffn, weight_type = weight_type)
+        return agemap(Total(tc))
+
+    def get_timeslice_metallicity(self, timeslice_dir = None, weight_type = "light"):
+        """
+        Return TimeSlice mean weighted age
+        """
+        if timeslice_dir is None:
+            timeslice_dir = "/Users/dk/sas/mangawork/manga/sandbox/starlight/MPL9_Spirals_noSpecs/"
+
+        ffn = "{}{}_E-n.fits".format(timeslice_dir, self.plateifu)
+        tc = timecube(ffn, weight_type = weight_type)
+        return metmap(Total(tc))
+    def get_timeslice_SFH(self, timeslice_dir = None, weight_type = "initial_mass"):
+        """
+        Return TimeSlice SFH_age and SFH_sfrs
+        """
+        if timeslice_dir is None:
+            timeslice_dir = "/Users/dk/sas/mangawork/manga/sandbox/starlight/MPL9_Spirals_noSpecs/"
+
+        ffn = "{}{}_E-n.fits".format(timeslice_dir, self.plateifu)
+        tc = timecube(ffn, weight_type = weight_type)
+        return SFH(tc)
+
+
 
     def get_PCA_MLi(self, pca_data_dir = None, **kwargs):
         """
@@ -522,6 +651,16 @@ class DKMapsMixin(object):
             pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'sandbox', 'mangapca', 'zachpace', 'CSPs_CKC14_MaNGA_20190215-1',
                            self.dapall["versdrp3"], self.dapall["versdap"], 'results')
         return PCA_zpres_info(self.dapall, name, pca_data_dir = pca_data_dir, **kwargs)
+
+    def get_PCA_mag(self, filter_obs, pca_data_dir = None, **kwargs):
+        """
+        Return PCA mag in specified filter
+        """
+        if pca_data_dir is None:
+            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'sandbox', 'mangapca', 'zachpace', 'CSPs_CKC14_MaNGA_20190215-1',
+                           self.dapall["versdrp3"], self.dapall["versdap"], 'results')
+        return PCA_mag(self.dapall, filter_obs, pca_data_dir = pca_data_dir, **kwargs)
+
 
     def get_bar_mask(self, galaxyzoo3d_dir = None, vote_threshold = None, **kwargs):
         """
@@ -581,9 +720,9 @@ class DKMapsMixin(object):
         return m_masked
 
 
-    def get_bar_coords(self, bar_mask = None, **kwargs):
+    def get_bar_coords(self, bar_mask = None, flip = False, bar_radius = None, **kwargs):
         """
-        Determines bar angle based on PCA method and returns Coordinate Frame in cylindrical 
+        Determines bar angle based on min bounding box and returns Coordinate Frame in cylindrical 
         coordinates scaled by the bar_length
 
         Parameters
@@ -602,7 +741,10 @@ class DKMapsMixin(object):
         try:
             assert bar_mask.sum() > 0
         except AssertionError:
-            raise ValueError("bar_mask does not identify any spaxels in the bar!")
+            nan_arr = np.full(self.spx_ellcoo_r_re.shape, np.nan)
+            bar_coords = CylindricalRepresentation(rho = nan_arr, phi = nan_arr*u.deg, z = nan_arr)
+            return bar_coords
+            # raise ValueError("bar_mask does not identify any spaxels in the bar!")
 
         # Define Coordinates in Galaxy Frame
         cyl = CylindricalRepresentation(rho = self.spx_ellcoo_r_re, 
@@ -615,19 +757,43 @@ class DKMapsMixin(object):
         bar_y = cart.y.flatten()[bar_mask]
 
         # Determine Bar Angle
-        C = np.cov(np.vstack([bar_x, 
-                   bar_y]))
-        w, v = np.linalg.eig(C)
-        inx = w.argsort()[::-1]
-        w, v = w[inx], v[:, inx]
+        points_cart = np.array([bar_x, bar_y]).T
+        bbox = minimum_bounding_rectangle(points_cart)
+        xx,yy = bbox[0,:]
+        dists = np.array([((xx - xx2)**2 + (yy-yy2)**2) for (xx2,yy2) in bbox])
+        args = np.argsort(dists)
+        xx2,yy2= bbox[args,:][2,:]
+        xx,yy = bbox[args,:][0,:]
+        slope = (yy2 - yy) / (xx2 - xx)
+        bar_angle = np.arctan2((yy2 - yy), (xx2-xx))
 
-        w_12 = w[:2]
-        v_12 = v[:, :2]
+
+        # C = np.cov(np.vstack([bar_x,
+        #            bar_y]))
+        # w, v = np.linalg.eig(C)
+        # inx = w.argsort()[::-1]
+        # w, v = w[inx], v[:, inx]
+
+        # w_12 = w[:2]
+        # v_12 = v[:, :2]
+
+        # Determine new r_bar rho-frame
+        l_or_w = np.sqrt((bbox[0,0] - bbox[1,0])**2 + (bbox[0,1] - bbox[1,1])**2)
+        l_or_w2 = np.sqrt((bbox[1,0] - bbox[3,0])**2 + (bbox[1,1] - bbox[3,1])**2)
+        
+        if bar_radius is None:
+            bar_radius = np.max([l_or_w, l_or_w2])/2.
+        new_center_x, new_center_y = bar_x.mean(), bar_y.mean()
+        new_x = cart.x - new_center_x
+        new_y = cart.y - new_center_y
+
+        new_cart = CartesianRepresentation(x = new_x, y = new_y, z = cart.z)
+        new_bar_coords = CylindricalRepresentation.from_cartesian(new_cart)
 
         med_x, med_y = np.median(bar_x), np.median(bar_y)
 
         # Check Angle Values and Fix
-        bar_angle = np.arctan2(v_12[0,1],v_12[0,0])
+        # bar_angle = np.arctan2(v_12[0,1],v_12[0,0])
         if (bar_x>med_x).sum() >= (bar_x<med_x).sum():
             if np.median(bar_y[bar_x>med_x]) >med_y:
                 try:
@@ -655,14 +821,19 @@ class DKMapsMixin(object):
             bar_angle = np.pi - bar_angle
 
         # Determine New Phi-frame
-        new_phi = cyl.phi - (bar_angle) * u.rad
+        new_phi = Angle(new_bar_coords.phi - (bar_angle) * u.rad)
 
-        # Determine new r_bar rho-frame
-        bar_radius = np.max(self.spx_ellcoo_r_re.value.flatten()[bar_mask])
-        new_rho = cyl.rho / bar_radius
+        if flip:
+            new_phi *= -1
+
+        
+        # bar_radius = np.max(self.spx_ellcoo_r_re.value.flatten()[bar_mask])
+        new_rho = new_bar_coords.rho / bar_radius
 
         bar_coords = CylindricalRepresentation(rho = new_rho, phi = new_phi, z = cyl.z)
+
         return bar_coords
+
 
 
     def mean_intensity_v_phi(self, map_name, 
@@ -734,9 +905,9 @@ class DKMapsMixin(object):
             logging.warning("estimator not recognized, using mean")
 
         if estimator is "mean":
-            estimator_function = np.mean
+            estimator_function = np.ma.mean
         else:
-            estimator_function = np.median
+            estimator_function = np.ma.median
             
         if snr_min is None:
             snr_min = 3.0
@@ -758,12 +929,18 @@ class DKMapsMixin(object):
         # Check map_name
         if map_name is "stellar_mass":
             map_data = self.get_PCA_stellar_mass()
-            map_unit = map_data.unit
-            map_data = map_data.value[0,:,:]
+            nan_mask = np.isnan(map_data)
+            map_data.mask |= nan_mask
+            map_unit = map_data.data.unit
+            map_data = np.ma.masked_array(data = map_data.data.value[0,:,:], 
+                mask = map_data.mask[0,:,:])
         elif map_name is "smsd":
             map_data = self.get_PCA_stellar_mass_density()
-            map_unit = map_data.unit
-            map_data = map_data.value[0,:,:]
+            nan_mask = np.isnan(map_data)
+            map_data.mask |= nan_mask
+            map_unit = map_data.data.unit
+            map_data = np.ma.masked_array(data = map_data.data.value[0,:,:], 
+                mask = map_data.mask[0,:,:])
         elif map_name is "Av":
             map_data = self.balmer_Av(snr_min = snr_min)
             map_unit = 1.
@@ -777,8 +954,12 @@ class DKMapsMixin(object):
                     map_data = self.get_PCA_zpres_info(map_name)
                 except FileNotFoundError:
                     map_data = np.full(self.get_map("emline_gflux_ha").shape, np.nan)
+                    map_data = np.ma.masked_array(data = map_data, mask = np.isnan(map_data))
                 if map_data.shape[0] == 3:
                     map_data = map_data[0,:,:]
+
+                map_data = np.ma.masked_array(data= map_data.data, 
+                    mask = map_data.mask | np.isnan(map_data.data))
                 map_unit = 1.
         
         average_values = np.zeros_like(central_phi.value)
@@ -789,10 +970,10 @@ class DKMapsMixin(object):
             
         for ell, phi in enumerate(central_phi):
             if wrap:
-                az_mask = bar_coords.phi <= phi + bin_width_phi
-                az_mask &= bar_coords.phi > phi - bin_width_phi
-                az_mask |= ((bar_coords.phi <= -180*u.deg - (phi - bin_width_phi)) & 
-                            (bar_coords.phi > -180*u.deg + (phi + bin_width_phi)))
+                az_mask = bar_coords.phi.wrap_at("180d") <= phi + bin_width_phi
+                az_mask &= bar_coords.phi.wrap_at("180d") > phi - bin_width_phi
+                az_mask |= ((bar_coords.phi.wrap_at("180d") <= -180*u.deg - (phi - bin_width_phi)) & 
+                            (bar_coords.phi.wrap_at("180d") > -180*u.deg + (phi + bin_width_phi)))
 
             else:
                 az_mask = bar_coords.phi.wrap_at("360d") <= phi + bin_width_phi

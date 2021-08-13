@@ -47,18 +47,19 @@ def prepare_marvin():
     config.setRelease("MPL-10")
     config.login()
 
-def setup():
+def setup(public = True):
     print("Mounting Google Drive")
     mount_drive()
     print("Checking Google Drive mount status (this can take ~5 minutes)")
     check_mount_status()
     print("Setting up SAS_BASE_DIR")
     add_sas_path()
-    print("Setting up SDSS login")
-    print("Note: you will need the SDSS login password for data access")
-    make_netrc()
-    print("Setting up Marvin for MPL-10")
-    prepare_marvin()
+    if not public:
+        print("Setting up SDSS login")
+        print("Note: you will need the SDSS login password for data access")
+        make_netrc()
+        print("Setting up Marvin for MPL-10")
+        prepare_marvin()
     print("Ready to use!")
 
 

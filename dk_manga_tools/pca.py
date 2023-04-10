@@ -32,7 +32,7 @@ def PCA_eigendata(vec_file = None, pca_vec_data_dir = None):
     if vec_file is None:
         if pca_vec_data_dir is None:
             pca_vec_data_dir = pca_vec_data_dir_master
-        vec_file = os.path.join(pca_vec_data_dir, "pc_vecs.fits")
+        vec_file = os.path.join(pca_vec_data_dir, "pc_vecs-1.0.0.fits")
 
     # Load vectors:
     with fits.open(vec_file) as vec_data:

@@ -360,7 +360,7 @@ class DK_MWAnalogs(DKAnalogMixin):
         """
         return Table of Targets that are in the Galaxy Zoo Catalog
         """
-        data_targets_gz_ind = [self.ind_dict_target[x.strip()] for x in self.gz['MANGAID']]
+        data_targets_gz_ind = [self.ind_dict_target[x.rstrip()] for x in self.gz['MANGAID']]
         return self.targets[data_targets_gz_ind]
 
     def get_barred_galaxies_mask(self):

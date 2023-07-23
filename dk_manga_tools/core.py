@@ -101,7 +101,7 @@ class DK_MWAnalogs(DKAnalogMixin):
         # Get or set filename for Galaxy Zoo VAC
         if filename_gz is None:
             self.filename_gz = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'morphology', 
-                            'galaxyzoo', 'MaNGA_gz-v2_0_1.fits')
+                            'galaxyzoo', 'MaNGA_gz-v1_0_1.fits')
         else:
             self.filename_gz = filename_gz
 

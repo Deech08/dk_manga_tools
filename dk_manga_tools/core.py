@@ -353,7 +353,7 @@ class DK_MWAnalogs(DKAnalogMixin):
         """
         return Table of Targets that are in the DRP ALL FILE
         """
-        data_targets_dap_ind = [self.ind_dict_target[x] for x in self.dap['MANGAID'].]
+        data_targets_dap_ind = [self.ind_dict_target[x] for x in self.dap['MANGAID']]
         return self.targets[data_targets_dap_ind]
 
     def targets_in_gz(self):

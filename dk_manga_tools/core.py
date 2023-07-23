@@ -61,7 +61,12 @@ class DK_MWAnalogs(DKAnalogMixin):
                 logging.warning("Using DRP Version: {}".format(self.drpver))
             else:
                 self.drpver = drpver
-            self.filename_drp = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'spectro', 'redux',
+
+            if config.release in ["DR17", "DR16", "DR15", "DR14"]:
+                self.filename_drp = os.path.join(os.environ['SAS_BASE_DIR'], config.release.lower(), 'manga', 'spectro', 'redux',
+                           self.drpver, 'drpall-{}.fits'.format(self.drpver))
+            else: 
+                self.filename_drp = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'spectro', 'redux',
                            self.drpver, 'drpall-{}.fits'.format(self.drpver))
         else:
             self.filename_drp  = filename_drp
@@ -73,7 +78,11 @@ class DK_MWAnalogs(DKAnalogMixin):
                 logging.warning("Using DAP Version: {}".format(self.dapver))
             else:
                 self.dapver = dapver
-            self.filename_dap = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'spectro', 'analysis',
+            if config.release in ["DR17", "DR16", "DR15", "DR14"]:
+                self.filename_dap = os.path.join(os.environ['SAS_BASE_DIR'], config.release.lower(), 'manga', 'spectro', 'analysis',
+                           self.drpver, self.dapver, 'dapall-{0}-{1}.fits'.format(self.drpver,self.dapver))
+            else
+                self.filename_dap = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'spectro', 'analysis',
                            self.drpver, self.dapver, 'dapall-{0}-{1}.fits'.format(self.drpver,self.dapver))
         else:
             self.filename_dap = filename_dap

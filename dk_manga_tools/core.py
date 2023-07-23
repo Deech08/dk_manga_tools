@@ -81,7 +81,7 @@ class DK_MWAnalogs(DKAnalogMixin):
             if config.release in ["DR17", "DR16", "DR15", "DR14"]:
                 self.filename_dap = os.path.join(os.environ['SAS_BASE_DIR'], config.release.lower(), 'manga', 'spectro', 'analysis',
                            self.drpver, self.dapver, 'dapall-{0}-{1}.fits'.format(self.drpver,self.dapver))
-            else
+            else:
                 self.filename_dap = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'spectro', 'analysis',
                            self.drpver, self.dapver, 'dapall-{0}-{1}.fits'.format(self.drpver,self.dapver))
         else:

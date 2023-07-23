@@ -89,7 +89,11 @@ class DK_MWAnalogs(DKAnalogMixin):
 
         # Get or set filename for Target File List
         if filename_targets is None:
-            self.filename_targets = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'target', 
+            if config.release in ["DR17", "DR16", "DR15", "DR14"]:
+                self.filename_dap = os.path.join(os.environ['SAS_BASE_DIR'], config.release.lower(), 'manga', 'target', 
+                            'v1_2_27', 'MaNGA_targets_extNSA_tiled_ancillary.fits')
+            else:
+                self.filename_targets = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'target', 
                             'v1_2_27', 'MaNGA_targets_extNSA_tiled_ancillary.fits')
         else:
             self.filename_targets = filename_targets

@@ -979,7 +979,7 @@ class DKAnalogMixin():
             sample = self.dk_sample
 
         if galaxyzoo3d_dir is None:
-            galaxyzoo3d_dir = "/Users/dk/sas/mangawork/manga/sandbox/galaxyzoo3d/v2_0_0/"
+            galaxyzoo3d_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'manga', 'morphology', 'galaxyzoo3d', 'v4_0_0')
 
         data = []
 

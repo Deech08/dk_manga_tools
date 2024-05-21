@@ -904,7 +904,7 @@ class DKMapsMixin(object):
             estimator = "mean"
             logging.warning("estimator not recognized, using mean")
 
-        if estimator is "mean":
+        if estimator == "mean":
             estimator_function = np.ma.mean
         else:
             estimator_function = np.ma.median
@@ -927,21 +927,21 @@ class DKMapsMixin(object):
         radial_mask &= bar_coords.rho > min_rho
 
         # Check map_name
-        if map_name is "stellar_mass":
+        if map_name == "stellar_mass":
             map_data = self.get_PCA_stellar_mass()
             nan_mask = np.isnan(map_data)
             map_data.mask |= nan_mask
             map_unit = map_data.data.unit
             map_data = np.ma.masked_array(data = map_data.data.value[0,:,:], 
                 mask = map_data.mask[0,:,:])
-        elif map_name is "smsd":
+        elif map_name == "smsd":
             map_data = self.get_PCA_stellar_mass_density()
             nan_mask = np.isnan(map_data)
             map_data.mask |= nan_mask
             map_unit = map_data.data.unit
             map_data = np.ma.masked_array(data = map_data.data.value[0,:,:], 
                 mask = map_data.mask[0,:,:])
-        elif map_name is "Av":
+        elif map_name == "Av":
             map_data = self.balmer_Av(snr_min = snr_min)
             map_unit = 1.
         else:
@@ -963,7 +963,7 @@ class DKMapsMixin(object):
                 map_unit = 1.
         
         average_values = np.zeros_like(central_phi.value)
-        if estimator is "mean":
+        if estimator == "mean":
             error_values = np.zeros_like(average_values)
         else:
             error_values = np.zeros((len(average_values),2))
@@ -983,9 +983,9 @@ class DKMapsMixin(object):
             
             
             average_values[ell] = estimator_function(map_data[current_mask])
-            if (estimator is "mean") & (return_errors):
+            if (estimator == "mean") & (return_errors):
                 error_values[ell] = np.std(map_data[current_mask])
-            elif (estimator is "median") & (return_errors):
+            elif (estimator == "median") & (return_errors):
                 error_values[ell,:] = np.percentile(map_data[current_mask].flatten(), (16,84))
                 
         if return_errors:

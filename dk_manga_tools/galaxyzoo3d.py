@@ -318,7 +318,7 @@ class GZ3DVAC(VACMixIn):
     Authors: Coleman Krawczyk, Karen Masters and the rest of the Galaxy Zoo 3D Team.
     '''
 
-    name = 'dkgz3d'
+    name = 'gz3d'
     description = 'Return object for working with Galaxy Zoo 3D data masks'
     version = {'DR17': 'v4_0_0', 'MPL-11': 'v4_0_0'}
     display_name = 'Galaxy Zoo 3D'

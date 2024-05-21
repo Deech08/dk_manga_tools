@@ -14,7 +14,7 @@ from astropy.cosmology import WMAP9
 
 directory = os.path.dirname(__file__)
 
-pca_vec_data_dir_master = os.path.join(os.environ['SAS_MANGAPCA_DIR'], 'CSPs_CKC14_MaNGA_20190215-1')
+pca_vec_data_dir_master = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1')
 
 spec_unit = 1e-17 * u.erg / u.s / u.cm**2. / u.AA
 absmag_sun_band = {'u': 6.39, 'g': 5.12, 'r': 4.64, 'i': 4.53, 'z': 4.51, 'V': 4.81}

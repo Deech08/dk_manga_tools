@@ -682,7 +682,7 @@ class DKMapsMixin(object):
             vote_threshold = 0.2
 
 
-        filename = glob.glob(galaxyzoo3d_dir+"{}*.fits.gz".format(self.mangaid))
+        filename = glob.glob(galaxyzoo3d_dir+"*{}*.fits.gz".format(self.mangaid))
         if filename == []:
             logging.warning("No Galaxy Zoo 3D Data Available for this Galaxy!")
             return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)

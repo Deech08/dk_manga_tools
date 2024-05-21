@@ -1024,5 +1024,5 @@ class DKMaps(DKMapsMixin, Maps):
         keywords passed to 'marvin.tools.maps.Maps'
     """
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(self, **kwargs)
 

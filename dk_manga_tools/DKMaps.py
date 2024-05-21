@@ -1023,6 +1023,6 @@ class DKMaps(DKMapsMixin, Maps):
     kwargs: 'dict', optional, must be keyword
         keywords passed to 'marvin.tools.maps.Maps'
     """
-    def __init__(self, **kwargs):
-        super().__init__(self, **kwargs)
+    def __init__(self, input=None, **kwargs):
+        super().__init__(input = input, **kwargs)
 

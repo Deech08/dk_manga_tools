@@ -551,8 +551,8 @@ class DKMapsMixin(object):
         Return PCA Stellar Mass map with errors in u.solmass
         """
         if pca_data_dir is None:
-            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'sandbox', 'mangapca', 'zachpace', 'CSPs_CKC14_MaNGA_20190215-1',
-                           self.dapall["versdrp3"], self.dapall["versdap"], 'results')
+            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1',
+                           'v2_5_3', '2.3.0', 'results')
         return PCA_stellar_mass(self.dapall, pca_data_dir = pca_data_dir, **kwargs)
 
     def get_timeslice_mass(self, timeslice_dir = None, **kwargs):
@@ -639,8 +639,8 @@ class DKMapsMixin(object):
         Return PCA Stellar Mass-to-Light ratio in the i-band
         """
         if pca_data_dir is None:
-            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'sandbox', 'mangapca', 'zachpace', 'CSPs_CKC14_MaNGA_20190215-1',
-                           self.dapall["versdrp3"], self.dapall["versdap"], 'results')
+            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1',
+                           'v2_5_3', '2.3.0', 'results')
         return PCA_MLi(self.dapall, pca_data_dir = pca_data_dir, **kwargs)
 
     def get_PCA_zpres_info(self, name, pca_data_dir = None, **kwargs):
@@ -648,8 +648,8 @@ class DKMapsMixin(object):
         Return additional specified info from PCA
         """
         if pca_data_dir is None:
-            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'sandbox', 'mangapca', 'zachpace', 'CSPs_CKC14_MaNGA_20190215-1',
-                           self.dapall["versdrp3"], self.dapall["versdap"], 'results')
+            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1',
+                           'v2_5_3', '2.3.0', 'results')
         return PCA_zpres_info(self.dapall, name, pca_data_dir = pca_data_dir, **kwargs)
 
     def get_PCA_mag(self, filter_obs, pca_data_dir = None, **kwargs):
@@ -657,8 +657,8 @@ class DKMapsMixin(object):
         Return PCA mag in specified filter
         """
         if pca_data_dir is None:
-            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'mangawork', 'manga', 'sandbox', 'mangapca', 'zachpace', 'CSPs_CKC14_MaNGA_20190215-1',
-                           self.dapall["versdrp3"], self.dapall["versdap"], 'results')
+            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1',
+                           'v2_5_3', '2.3.0', 'results')
         return PCA_mag(self.dapall, filter_obs, pca_data_dir = pca_data_dir, **kwargs)
 
 
@@ -676,7 +676,7 @@ class DKMapsMixin(object):
 
 
         if galaxyzoo3d_dir is None:
-            galaxyzoo3d_dir = "/Users/dk/sas/mangawork/manga/sandbox/galaxyzoo3d/v2_0_0/"
+            galaxyzoo3d_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'morphology', 'galaxyzoo3d', 'v4_0_0')
 
         if vote_threshold is None:
             vote_threshold = 0.2

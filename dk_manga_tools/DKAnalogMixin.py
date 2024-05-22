@@ -1032,6 +1032,80 @@ class DKAnalogMixin():
         
         return np.array(data)
 
+    def get_spiral_masks(self, sample = None, galaxyzoo3d_dir = None, supress_warnings = True, **kwargs):
+        """
+        Return spiral masks from GalaxyZoo 3D
+
+        Parameters
+        ----------
+        sample:
+            Sample to get data for
+        galaxyzoo3d_dir: 'str', optional, must be keyword
+            Directory to find data files
+        supress_warnings: 'bool', optional, must be keyword
+            supresses warnings for galaxies that don't have data;
+            default of True
+        """
+        from sdss_access import AccessError
+        from marvin.core.exceptions import MarvinError
+
+        if sample is None:
+            sample = self.dk_sample
+
+        if galaxyzoo3d_dir is None:
+            galaxyzoo3d_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'morphology', 'galaxyzoo3d', 'v4_0_0')
+
+        data = []
+
+
+        if sample.__class__ != Row:
+            if "PLATEIFU" in sample.keys():
+                for plateifu in sample["PLATEIFU"]:
+                    try:
+                        maps = DKMaps(plateifu = plateifu)
+                    except AccessError:
+                        logging.warning("AccessError raised - skipping Galaxy with plateifu {}".format(plateifu))
+                        mask = np.array([np.nan])
+                    else:
+                        if supress_warnings:
+                            with warnings.catch_warnings():
+                                warnings.simplefilter("ignore")
+                                mask = maps.get_spiral_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
+                        else:
+                            mask = maps.get_spiral_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
+
+                    data.append(mask.flatten())
+            else:
+                for mangaid in sample["MANGAID"]:
+                    try:
+                        maps = DKMaps(mangaid = mangaid.rstrip())
+                    except AccessError:
+                        logging.warning("AccessError raised - skipping Galaxy with MaNGA-ID {}".format(mangaid.rstrip()))
+                        mask = np.array([np.nan])
+                    except MarvinError:
+                        logging.warning("MarvinError raised - skipping Galaxy with MaNGA-ID {}".format(mangaid.rstrip()))
+                        mask = np.array([np.nan])
+                    else:
+                        if supress_warnings:
+                            with warnings.catch_warnings():
+                                warnings.simplefilter("ignore")
+                                mask = maps.get_spiral_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
+                        else:
+                            mask = maps.get_spiral_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
+
+                    data.append(mask.flatten())
+        else:
+            maps = DKMaps(plateifu = sample["PLATEIFU"])
+            if supress_warnings:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    mask = maps.get_spiral_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
+            else:
+                mask = maps.get_spiral_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
+            data.append(mask.flatten())
+        
+        return np.array(data)
+
     def get_all_bpt_masks(self, sample = None, **kwargs):
         """
         Return bpt masks from nii bpt diagram

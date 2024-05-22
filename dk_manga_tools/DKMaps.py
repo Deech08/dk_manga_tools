@@ -670,8 +670,8 @@ class DKMapsMixin(object):
         ----------
         galaxyzoo3d_dir: 'str', optional, must be keyword
             Directory to find data files
-        vote_threshold: 'number', optional, must be keyword
-            Vote threshold to consider; default of 0.2 (20%)
+        vote_threshold: 'int', optional, must be keyword
+            Vote threshold to consider; default of 3 [/ 15 or 20%)]
         """
 
 
@@ -679,8 +679,7 @@ class DKMapsMixin(object):
             galaxyzoo3d_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'morphology', 'galaxyzoo3d', 'v4_0_0')
 
         if vote_threshold is None:
-            vote_threshold = 0.2
-
+            vote_threshold = 3
 
         filename = glob.glob(galaxyzoo3d_dir+"/*{}*.fits.gz".format(self.mangaid))
         if filename == []:
@@ -693,15 +692,52 @@ class DKMapsMixin(object):
                 logging.warning("No Bar Mask Available for this Galaxy!")
                 return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)
             else:
-                try:
-                    bar_mask = data.bar_mask_spaxel >= data.metadata["GZ2_bar_votes"] * vote_threshold
-                except KeyError:
-                    bar_mask = data.bar_mask_spaxel >= data.metadata["GZ_bar_votes"] * vote_threshold
+                
+                bar_mask = data.bar_mask_spaxel >= 15 * vote_threshold
 
                 if np.any(bar_mask):
                     return bar_mask
                 else:
                     logging.warning("No Bar Mask Available for this Galaxy above vote threshold!")
+                    return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)
+
+    def get_spiral_mask(self, galaxyzoo3d_dir = None, vote_threshold = None, **kwargs):
+        """
+        If available get Galaxy Zoo 3D Spiral Spaxel Mask
+
+        Parameters
+        ----------
+        galaxyzoo3d_dir: 'str', optional, must be keyword
+            Directory to find data files
+        vote_threshold: 'int', optional, must be keyword
+            Vote threshold to consider; default of 3 [/ 15 or 20%)]
+        """
+
+
+        if galaxyzoo3d_dir is None:
+            galaxyzoo3d_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'morphology', 'galaxyzoo3d', 'v4_0_0')
+
+        if vote_threshold is None:
+            vote_threshold = 3
+
+        filename = glob.glob(galaxyzoo3d_dir+"/*{}*.fits.gz".format(self.mangaid))
+        if filename == []:
+            logging.warning("No Galaxy Zoo 3D Data Available for this Galaxy!")
+            return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)
+        else:
+            data = gz3d_fits(filename[0], maps = self)
+            data.make_all_spaxel_masks()
+            if np.all(data.spiral_mask_spaxel == 0):
+                logging.warning("No Spiral Mask Available for this Galaxy!")
+                return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)
+            else:
+                
+                spiral_mask = data.spiral_mask_spaxel >= 15 * vote_threshold
+
+                if np.any(spiral_mask):
+                    return spiral_mask
+                else:
+                    logging.warning("No Spiral Mask Available for this Galaxy above vote threshold!")
                     return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)
 
     def get_map(self,  *args, snr_min = None, **kwargs):

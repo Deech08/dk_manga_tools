@@ -789,8 +789,8 @@ class DKMapsMixin(object):
         # Convert to Cartesian in Galaxy Frame
         cart = cyl.to_cartesian()
 
-        bar_x = cart.x.flatten()[bar_mask]
-        bar_y = cart.y.flatten()[bar_mask]
+        bar_x = cart.x.flatten().value[bar_mask]
+        bar_y = cart.y.flatten().value[bar_mask]
 
         # Determine Bar Angle
         points_cart = np.array([bar_x, bar_y]).T

@@ -783,9 +783,9 @@ class DKMapsMixin(object):
             # raise ValueError("bar_mask does not identify any spaxels in the bar!")
 
         # Define Coordinates in Galaxy Frame
-        cyl = CylindricalRepresentation(rho = self.spx_ellcoo_r_re, 
-                                 phi = self.spx_ellcoo_elliptical_azimuth * u.deg, 
-                                 z = np.zeros_like(self.spx_ellcoo_r_re))
+        cyl = CylindricalRepresentation(rho = self.spx_ellcoo_r_re.value, 
+                                 phi = self.spx_ellcoo_elliptical_azimuth.value * u.deg, 
+                                 z = np.zeros_like(self.spx_ellcoo_r_re.value))
         # Convert to Cartesian in Galaxy Frame
         cart = cyl.to_cartesian()
 

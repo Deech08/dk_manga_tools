@@ -1198,7 +1198,7 @@ class DKAnalogMixin():
             else:
                 bar_coords.append(maps.get_bar_coords(**kwargs))
 
-        return np.array(bar_coords)
+        return bar_coords
 
     
 

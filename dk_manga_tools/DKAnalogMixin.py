@@ -1021,13 +1021,18 @@ class DKAnalogMixin():
 
                     data.append(mask.flatten())
         else:
-            maps = DKMaps(plateifu = sample["PLATEIFU"])
-            if supress_warnings:
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    mask = maps.get_bar_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
+            try:
+                maps = DKMaps(plateifu = sample["PLATEIFU"])
+            except AccessError:
+                logging.warning("AccessError raised - skipping Galaxy with plateifu {}".format(plateifu))
+                mask = np.array([np.nan])
             else:
-                mask = maps.get_bar_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
+                if supress_warnings:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        mask = maps.get_bar_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
+                else:
+                    mask = maps.get_bar_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
             data.append(mask.flatten())
         
         return np.array(data)
@@ -1095,13 +1100,18 @@ class DKAnalogMixin():
 
                     data.append(mask.flatten())
         else:
-            maps = DKMaps(plateifu = sample["PLATEIFU"])
-            if supress_warnings:
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    mask = maps.get_spiral_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
+            try:
+                maps = DKMaps(plateifu = sample["PLATEIFU"])
+            except AccessError:
+                logging.warning("AccessError raised - skipping Galaxy with plateifu {}".format(plateifu))
+                mask = np.array([np.nan])
             else:
-                mask = maps.get_spiral_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
+                if supress_warnings:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        mask = maps.get_spiral_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
+                else:
+                    mask = maps.get_spiral_mask(galaxyzoo3d_dir = galaxyzoo3d_dir, **kwargs)
             data.append(mask.flatten())
         
         return np.array(data)

@@ -83,7 +83,7 @@ class DKSamplePlotter():
         self.cid = self.fig.canvas.mpl_connect("button_press_event", self.on_click)
 
     def on_click(self, event):
-        if event.button is 1: # left mouse click
+        if event.button == 1: # left mouse click
             if event.inaxes not in self.image_axes: 
                 if event.inaxes is self.scale_ax:
                     # Re scale map image
@@ -1024,7 +1024,7 @@ class DKAnalogMixin():
             try:
                 maps = DKMaps(plateifu = sample["PLATEIFU"])
             except AccessError:
-                logging.warning("AccessError raised - skipping Galaxy with plateifu {}".format(plateifu))
+                logging.warning("AccessError raised - skipping Galaxy with plateifu {}".format(sample["PLATEIFU"]))
                 mask = np.array([np.nan])
             else:
                 if supress_warnings:

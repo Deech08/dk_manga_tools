@@ -693,7 +693,7 @@ class DKMapsMixin(object):
                 return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)
             else:
                 
-                bar_mask = data.bar_mask_spaxel >= 15 * vote_threshold
+                bar_mask = data.bar_mask_spaxel >= vote_threshold
 
                 if np.any(bar_mask):
                     return bar_mask
@@ -732,7 +732,7 @@ class DKMapsMixin(object):
                 return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)
             else:
                 
-                spiral_mask = data.spiral_mask_spaxel >= 15 * vote_threshold
+                spiral_mask = data.spiral_mask_spaxel >= vote_threshold
 
                 if np.any(spiral_mask):
                     return spiral_mask

@@ -1189,7 +1189,7 @@ class DKAnalogMixin():
                     bar_coords.append(maps.get_bar_coords(**kwargs))
 
         else:
-            maps = DKMaps(plateifu = sameple["PLATEIFU"])
+            maps = DKMaps(plateifu = sample["PLATEIFU"])
             if bar_masks is not None:
                 if flip_array is not None:
                     bar_coords.append(maps.get_bar_coords(bar_mask = bar_masks, flip = flip_array))

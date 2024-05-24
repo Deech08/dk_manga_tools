@@ -33,7 +33,7 @@ def load_PIPE3D_SSP(plateifu, pipe3d_dir = None):
 
     ind = np.arange(header["NAXIS3"])
     desc = []
-    type_info []
+    type_info = []
     unit = []
     for ell in ind:
         desc.append(header["DESC_{}".format(ell)])

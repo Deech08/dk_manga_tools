@@ -29,6 +29,7 @@ from .pca import PCA_MLi
 from .pca import PCA_zpres_info
 from .pca import PCA_mag
 from .gz3d_fits import gz3d_fits
+from .pipe3d import load_PIPE3D_SSP
 
 from .timeslice_utils import timecube, agemap, Total, metmap, SFH
 
@@ -545,7 +546,6 @@ class DKMapsMixin(object):
 
 
 
-
     def get_PCA_stellar_mass(self, pca_data_dir = None, **kwargs):
         """
         Return PCA Stellar Mass map with errors in u.solmass
@@ -1030,8 +1030,11 @@ class DKMapsMixin(object):
             return average_values * map_unit, central_phi
     
     
+    def load_PIPE3D_SSP(self, pipe3d_dir):
+        info, data = load_PIPE3D_SSP(self["PLATEIFU"], **kwargs)
 
-
+        self.pipe3d_ssp_info = info
+        self.pipe3d_ssp = data
 
 
 

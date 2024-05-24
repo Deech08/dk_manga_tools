@@ -1033,7 +1033,7 @@ class DKMapsMixin(object):
     def load_PIPE3D_SSP(self, pipe3d_dir = None):
         info, data = load_PIPE3D_SSP(self.plateifu, pipe3d_dir = pipe3d_dir)
 
-        self.__setattr__("pipe3d_ssp_info",info
+        self.__setattr__("pipe3d_ssp_info",info)
         self.__setattr__("pipe3d_ssp",data)
 
 

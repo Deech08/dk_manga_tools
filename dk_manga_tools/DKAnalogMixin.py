@@ -1417,7 +1417,7 @@ class DKAnalogMixin():
             result = []
             for plateifu in sample["PLATEIFU"]:
                 m = DKMaps(plateifu)
-                m.load_PIPE3D_SSM(pipe3d_dir = pipe3d_dir)
+                m.load_PIPE3D_SSP(pipe3d_dir = pipe3d_dir)
                 if is_list_like(SSP_KEY):
                     result.append([m.pipe3d_ssp[key] for key in SSP_KEY])
                 else:
@@ -1425,7 +1425,7 @@ class DKAnalogMixin():
             return result
         else:
             m = DKMaps(sample["PLATEIFU"])
-            m.load_PIPE3D_SSM(pipe3d_dir = pipe3d_dir)
+            m.load_PIPE3D_SSP(pipe3d_dir = pipe3d_dir)
             if is_list_like(SSP_KEY):
                 return [m.pipe3d_ssp[key] for key in SSP_KEY]
             else:

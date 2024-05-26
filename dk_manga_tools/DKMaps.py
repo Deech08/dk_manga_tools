@@ -1031,7 +1031,7 @@ class DKMapsMixin(object):
     
     
     def load_PIPE3D_SSP(self, pipe3d_dir = None):
-        if self.pipe3d_ssp is None:
+        if not hasattr(self,pipe3d_ssp):
             info, data = load_PIPE3D_SSP(self.plateifu, pipe3d_dir = pipe3d_dir)
 
             self.__setattr__("pipe3d_ssp_info",info)

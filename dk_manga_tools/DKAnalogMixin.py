@@ -1389,6 +1389,55 @@ class DKAnalogMixin():
 
 
 
+    def get_PIPE3D_SSP_entry(self, SSP_KEY, sample = None, pipe3d_dir = None):
+        """
+        get PIPE3D quantities from specified SSP_KEY or list of keys
+
+        PARAMETERS
+        ----------
+        SSP_KEY: `str`, `list-like`
+            key from PIPE3D SSP or list of keys to get data for
+        sample: `astropy.table.Table`, `astropy.table.Table.Row` 
+            optional, must be keyword
+            sample to get data for
+        pipe3d_dir: `str` 
+            optional, must be keyword
+            directory that holds PIPE3D data
+
+        RETURNS
+        -------
+        result: `list-like`
+            list of data for each galaxy in sample
+        """
+        from pandas.api.type import is_list_like
+        if sample is None:
+            sample = self.dk_sample
+
+        if sample.__class__ != Row:
+            result = []
+            for plateifu in sample["PLATEIFU"]:
+                m = DKMaps(plateifu)
+                m.load_PIPE3D_SSM(pipe3d_dir = pipe3d_dir)
+                if is_list_like(SSP_KEY):
+                    result.append([m.pipe3d_ssp[key] for key in SSP_KEY])
+                else:
+                    result.append(m.pipe3d_ssd[SSP_KEY])
+            return result
+        else:
+            m = DKMaps(sample["PLATEIFU"])
+            m.load_PIPE3D_SSM(pipe3d_dir = pipe3d_dir)
+            if is_list_like(SSP_KEY):
+                return [m.pipe3d_ssp[key] for key in SSP_KEY]
+            else:
+                return m.pipe3d_ssd[SSP_KEY]
+
+
+
+
+
+
+
+
 
 
 

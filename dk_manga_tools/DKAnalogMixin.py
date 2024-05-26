@@ -1409,7 +1409,7 @@ class DKAnalogMixin():
         result: `list-like`
             list of data for each galaxy in sample
         """
-        from pandas.api.type import is_list_like
+        from pandas.api.types import is_list_like
         if sample is None:
             sample = self.dk_sample
 

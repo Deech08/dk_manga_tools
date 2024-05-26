@@ -1419,17 +1419,17 @@ class DKAnalogMixin():
                 m = DKMaps(plateifu)
                 m.load_PIPE3D_SSP(pipe3d_dir = pipe3d_dir)
                 if is_list_like(SSP_KEY):
-                    result.append([m.pipe3d_ssp[key] for key in SSP_KEY])
+                    result.append([m.pipe3d_ssp[key].data.flatten() for key in SSP_KEY])
                 else:
-                    result.append(m.pipe3d_ssd[SSP_KEY])
+                    result.append(m.pipe3d_ssd[SSP_KEY].data.flatten())
             return result
         else:
             m = DKMaps(sample["PLATEIFU"])
             m.load_PIPE3D_SSP(pipe3d_dir = pipe3d_dir)
             if is_list_like(SSP_KEY):
-                return [m.pipe3d_ssp[key] for key in SSP_KEY]
+                return [m.pipe3d_ssp[key].data.flatten() for key in SSP_KEY]
             else:
-                return m.pipe3d_ssd[SSP_KEY]
+                return m.pipe3d_ssd[SSP_KEY].data.flatten()
 
 
 

@@ -885,7 +885,7 @@ class DKMapsMixin(object):
         Parameters
         ----------
         map_name: `str`
-            name of map attribute to use
+            name of map attribute to use, or the data to use.
         bin_width_phi: `u.Quantity`, `number`, optional, must be keyword
             width of bins along azimuth angle
             defualt units of deg
@@ -963,7 +963,13 @@ class DKMapsMixin(object):
         radial_mask &= bar_coords.rho > min_rho
 
         # Check map_name
-        if map_name == "stellar_mass":
+        if type(map_name) != str:
+            nan_mask = np.isnan(map_name)
+            map_data.np.masked_array(data = map_name, mask = nan_mask)
+            map_unit = 1.
+            
+
+        elif map_name == "stellar_mass":
             map_data = self.get_PCA_stellar_mass()
             nan_mask = np.isnan(map_data)
             map_data.mask |= nan_mask

@@ -965,7 +965,7 @@ class DKMapsMixin(object):
         # Check map_name
         if type(map_name) != str:
             nan_mask = np.isnan(map_name)
-            map_data = np.masked_array(data = map_name, mask = nan_mask)
+            map_data = np.ma.masked_array(data = map_name, mask = nan_mask)
             map_unit = 1.
 
 

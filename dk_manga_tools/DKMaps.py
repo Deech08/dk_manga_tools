@@ -718,7 +718,7 @@ class DKMapsMixin(object):
             galaxyzoo3d_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'morphology', 'galaxyzoo3d', 'v4_0_0')
 
         if vote_threshold is None:
-            vote_threshold = 3
+            vote_threshold = 4
 
         filename = glob.glob(galaxyzoo3d_dir+"/*{}*.fits.gz".format(self.mangaid))
         if filename == []:

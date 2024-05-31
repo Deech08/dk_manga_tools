@@ -701,7 +701,7 @@ class DKMapsMixin(object):
                     logging.warning("No Bar Mask Available for this Galaxy above vote threshold!")
                     return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)
 
-    def get_spiral_mask(self, galaxyzoo3d_dir = None, vote_threshold = None, **kwargs):
+    def get_spiral_mask(self, galaxyzoo3d_dir = None, vote_threshold = None, raw = False **kwargs):
         """
         If available get Galaxy Zoo 3D Spiral Spaxel Mask
 
@@ -711,6 +711,8 @@ class DKMapsMixin(object):
             Directory to find data files
         vote_threshold: 'int', optional, must be keyword
             Vote threshold to consider; default of 3 [/ 15 or 20%)]
+        raw: 'bool', optional, must be keyword
+            if True, returns raw mask counts, not based on vote thresholds
         """
 
 
@@ -728,17 +730,26 @@ class DKMapsMixin(object):
             data = gz3d_fits(filename[0], maps = self)
             data.make_all_spaxel_masks()
             if np.all(data.spiral_mask_spaxel == 0):
-                logging.warning("No Spiral Mask Available for this Galaxy!")
-                return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)
+                if raw:
+                    return data.spiral_mask_spaxel
+                else:
+                    logging.warning("No Spiral Mask Available for this Galaxy!")
+                    return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)
             else:
                 
-                spiral_mask = data.spiral_mask_spaxel >= vote_threshold
+                if not raw:
+                    spiral_mask = data.spiral_mask_spaxel >= vote_threshold
+                
 
-                if np.any(spiral_mask):
-                    return spiral_mask
+                    if np.any(spiral_mask):
+                        return spiral_mask
+                    else:
+                        logging.warning("No Spiral Mask Available for this Galaxy above vote threshold!")
+                        
+                        return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)
                 else:
-                    logging.warning("No Spiral Mask Available for this Galaxy above vote threshold!")
-                    return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)
+                    spiral_mask = data.spiral_mask_spaxel
+                    return spiral_mask
 
     def get_map(self,  *args, snr_min = None, **kwargs):
         """

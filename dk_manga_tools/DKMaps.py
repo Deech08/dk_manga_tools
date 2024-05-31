@@ -701,7 +701,7 @@ class DKMapsMixin(object):
                     logging.warning("No Bar Mask Available for this Galaxy above vote threshold!")
                     return np.zeros(self["emline gflux ha"].value.shape[0:], dtype = bool)
 
-    def get_spiral_mask(self, galaxyzoo3d_dir = None, vote_threshold = None, raw = False **kwargs):
+    def get_spiral_mask(self, galaxyzoo3d_dir = None, vote_threshold = None, raw = False, **kwargs):
         """
         If available get Galaxy Zoo 3D Spiral Spaxel Mask
 

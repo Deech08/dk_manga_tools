@@ -456,7 +456,7 @@ def load_CSP_data(pca_data_dir = None):
         "Ca_HK":Ca_HK,
         "MLr":MLr,
         "MLi":MLi,
-        "MLiz":MLZ,
+        "MLz":MLz,
         "MLiV":MLV,
         "Cgr":Cgr,
         "Cri":Cri,

@@ -11,6 +11,7 @@ import os
 from speclite import filters
 from astropy.cosmology import WMAP9
 from astropy.table import Table
+from .DKMaps import DKMaps
 
 
 directory = os.path.dirname(__file__)
@@ -252,6 +253,55 @@ def PCA_MLi(maps = None, dapall=None, plateifu = None, filename = None, pca_data
         MLi = pca_data["MLi"].data
 
     return MLi
+
+def PCA_info(name, maps = None, dapall = None, plateifu = None, filename = None, pca_data_dir = None, 
+    masked = True, goodfrac_channel = 2, goodfrac_thresh = 0.0001):
+    """
+    Return specific PCA CSP based info
+
+    Parameters
+    ----------
+    name: `string`
+        name of info to get from PCA data, 
+        see https://data.sdss.org/datamodel/files/MANGA_PCA/PCAY_VER/CSPs/CSPs.html
+    """
+
+    if pca_data_dir is None:
+        pca_data_dir = pca_dr17_dir
+
+    if filename is None:
+        if plateifu is None:
+            if maps is None:
+                plateifu = dapall["plateifu"]
+            else:
+                plateifu = maps.plateifu
+        else:
+            filename = os.path.join(pca_data_dir, "v3_1_1", "3.1.0", plateifu.split("-")[0], "mangapca-{}.fits".format(plateifu))
+
+    # get main info
+    with fits.open(filename) as pca_data:
+        header = pca_data[0].header
+        mask = pca_data["MASK"].data 
+        mask_header = pca_data["MASK"].header  
+        good_frac = pca_data["GOODFRAC"].data
+        modelnum = pca_data["MODELNUM"].data
+
+        galmask = mask == 0
+        galmask &= goodfrac[goodfrac_channel] > goodfrac_thresh
+
+        if maps is None:
+            maps = DKMaps(plateifu)
+
+        if not hasattr(maps, "pca_csp"):
+            maps.load_CSP_data(pca_data_dir = pca_data_dir)
+
+        info = np.array([maps.pca_csp[name][ell] for ell in modelnum])
+
+        if masked:
+            return np.ma.masked_array(data = info, mask = ~galmask)
+        else:
+            return info
+
 
 def PCA_zpres_info(name, dapall=None, maps = None, plateifu = None, filename = None, pca_data_dir = None, 
     masked = True, goodfrac_channel = 2, 

@@ -89,7 +89,7 @@ def PCA_Spectrum(plateifu = None, filename = None, vec_file = None,
     return spectrum, lam_spec
 
 def PCA_mag(filter_obs, dapall = None, maps = None, plateifu = None, filename = None, vec_file = None, 
-                vec_data = None, pca_data_dir = None):
+                vec_data = None, pca_vec_data_dir = None):
     """
     Return absolute AB Magnitude in filter provided
 

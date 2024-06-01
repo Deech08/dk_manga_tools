@@ -550,9 +550,6 @@ class DKMapsMixin(object):
         """
         Return PCA Stellar Mass map with errors in u.solmass
         """
-        if pca_data_dir is None:
-            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1',
-                           'v2_5_3', '2.3.0', 'results')
         return PCA_stellar_mass(plateifu = self.plateifu, pca_data_dir = pca_data_dir, **kwargs)
 
     def get_timeslice_mass(self, timeslice_dir = None, **kwargs):
@@ -638,27 +635,18 @@ class DKMapsMixin(object):
         """
         Return PCA Stellar Mass-to-Light ratio in the i-band
         """
-        if pca_data_dir is None:
-            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1',
-                           'v2_5_3', '2.3.0', 'results')
         return PCA_MLi(maps = self, pca_data_dir = pca_data_dir, **kwargs)
 
     def get_PCA_zpres_info(self, name, pca_data_dir = None, **kwargs):
         """
         Return additional specified info from PCA
         """
-        if pca_data_dir is None:
-            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1',
-                           'v2_5_3', '2.3.0', 'results')
-        return PCA_zpres_info(None, name, plateifu = self.plateifu, pca_data_dir = pca_data_dir, **kwargs)
+        return PCA_zpres_info(name, plateifu = self.plateifu, pca_data_dir = pca_data_dir, **kwargs)
 
     def get_PCA_mag(self, filter_obs, pca_data_dir = None, **kwargs):
         """
         Return PCA mag in specified filter
         """
-        if pca_data_dir is None:
-            pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1',
-                           'v2_5_3', '2.3.0', 'results')
         return PCA_mag(filter_obs, maps = self, pca_data_dir = pca_data_dir, **kwargs)
 
 

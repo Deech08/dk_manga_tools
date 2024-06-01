@@ -10,6 +10,7 @@ import os
 
 from speclite import filters
 from astropy.cosmology import WMAP9
+from astropy.table import Table
 
 
 directory = os.path.dirname(__file__)
@@ -315,9 +316,152 @@ def PCA_zpres_info(name, dapall=None, maps = None, plateifu = None, filename = N
 
 
 
+def load_CSP_data(pca_data_dir = None):
+    if pca_data_dir is None:
+        pca_data_dir = pca_dr17_dir
 
+    A_csps = []
+    d1 = []
+    dtb = []
+    fbhb = []
+    gamma = []
+    logzsol = []
+    nburst = []
+    sbss = []
+    tb = []
+    tf = []
+    theta = []
+    tt = []
+    f20 = []
+    f50 = []
+    f100 = []
+    f200 = []
+    f500 = []
+    f1G = []
+    mwa = []
+    mstar = []
+    sigma = []
+    Na_D = []
+    Hdelta_A = []
+    Hgamma_A = []
+    Dn4000 = []
+    D4000 = []
+    Ca_HK = []
+    MLr = []
+    MLi = []
+    MLz = []
+    MLV = []
+    Cgr = []
+    Cri = []
+    Cgi = []
 
+    for i in range(0,40):
+        with fits.open(os.path.join(pca_data_dir, "CSPs", "CSPs_{}.fits".format(i))) as csps:
+            A_csps.append(csps[1].data['A'].T)
+            d1.append(csps[1].data['d1'])
+            dtb.append(csps[1].data['dtb'].T)
+            fbhb.append(csps[1].data['fbhb'])
+            gamma.append(csps[1].data['gamma'])
+            logzsol.append(csps[1].data['logzsol'])
+            nburst.append(csps[1].data['nburst'])
+            sbss.append(csps[1].data['sbss'])
+            tb.append(csps[1].data['tb'].T)
+            tf.append(csps[1].data['tf'])
+            theta.append(csps[1].data['theta'])
+            tt.append(csps[1].data['tt'])
+            f20.append(csps[1].data['F_20M'])
+            f50.append(csps[1].data['F_50M'])
+            f100.append(csps[1].data['F_100M'])
+            f200.append(csps[1].data['F_200M'])
+            f500.append(csps[1].data['F_500M'])
+            f1G.append(csps[1].data['F_1G'])
+            mwa.append(csps[1].data['MWA'])
+            mstar.append(csps[1].data['mstar'])
+            sigma.append(csps[1].data['sigma'])
+            Na_D.append(csps[1].data['Na_D'])
+            Hdelta_A.append(csps[1].data['Hdelta_A'])
+            Hgamma_A.append(csps[1].data['Hgamma_A'])
+            Dn4000.append(csps[1].data['Dn4000'])
+            D4000.append(csps[1].data['D4000'])
+            Ca_HK.append(csps[1].data['Ca_HK'])
+            MLr.append(csps[1].data['MLr'])
+            MLi.append(csps[1].data['MLi'])
+            MLz.append(csps[1].data['MLz'])
+            MLV.append(csps[1].data['MLV'])
+            Cgr.append(csps[1].data['Cgr'])
+            Cri.append(csps[1].data['Cri'])
+            Cgi.append(csps[1].data['Cgi'])
 
+    A_csps = np.hstack(A_csps)
+    d1 = np.hstack(d1)
+    dtb = np.hstack(dtb)
+    fbhb = np.hstack(fbhb)
+    gamma = np.hstack(gamma)
+    logzsol = np.hstack(logzsol)
+    nburst = np.hstack(nburst)
+    sbss = np.hstack(sbss)
+    tb = np.hstack(tb)
+    tf = np.hstack(tf)
+    theta = np.hstack(theta)
+    tt = np.hstack(tt)
+    f20 = np.hstack(f20)
+    f50 = np.hstack(f50)
+    f100 = np.hstack(f100)
+    f200 = np.hstack(f200)
+    f500 = np.hstack(f500)
+    f1G = np.hstack(f1G)
+    mwa = np.hstack(mwa)
+    mstar = np.hstack(mstar)
+    sigma = np.hstack(sigma)
+    Na_D = np.hstack(Na_D)
+    Hdelta_A = np.hstack(Hdelta_A)
+    Hgamma_A = np.hstack(Hgamma_A)
+    Dn4000 = np.hstack(Dn4000)
+    D4000 = np.hstack(D4000)
+    Ca_HK = np.hstack(Ca_HK)
+    MLr = np.hstack(MLr)
+    MLi = np.hstack(MLi)
+    MLz = np.hstack(MLz)
+    MLV = np.hstack(MLV)
+    Cgr = np.hstack(Cgr)
+    Cri = np.hstack(Cri)
+    Cgi = np.hstack(Cgi)
+
+    return Table({
+        "A":A_csps, 
+        "d1":d1,
+        "dtb":dtb,
+        "fbhb":fbhb,
+        "gamma":gamma,
+        "logzsol":logzsol,
+        "nburst":nburst,
+        "sbss":sbss,
+        "tb":tb,
+        "tf":tf,
+        "theta":theta,
+        "tt":tt,
+        "F_20M":f20,
+        "F_50M":f50,
+        "F_100M":f100,
+        "F_200M":f200,
+        "F_500M":f500,
+        "F_1G":f1G,
+        "MWA":mwa,
+        "mstar":mstar,
+        "sigma":sigma,
+        "Na_D":Na_D,
+        "Hdelta_A":Hdelta_A,
+        "Hgamma_A":Hgamma_A,
+        "Dn4000":Dn4000,
+        "Ca_HK":Ca_HK,
+        "MLr":MLr,
+        "MLi":MLi,
+        "MLiz":MLZ,
+        "MLiV":MLV,
+        "Cgr":Cgr,
+        "Cri":Cri,
+        "Cgi":Cgi,
+        })
 
 
 

@@ -27,7 +27,7 @@ import glob
 from .pca import PCA_stellar_mass
 from .pca import PCA_MLi
 from .pca import PCA_zpres_info
-from .pca import PCA_mag
+from .pca import PCA_mag, load_CSP_data
 from .gz3d_fits import gz3d_fits
 from .pipe3d import load_PIPE3D_SSP
 
@@ -1041,6 +1041,10 @@ class DKMapsMixin(object):
 
             self.__setattr__("pipe3d_ssp_info",info)
             self.__setattr__("pipe3d_ssp",data)
+
+    def load_PCA_CSP(self, pca_data_dir = None):
+        if not hasattr(self,"pca_csp"):
+            self.__setattr__("pca_scp",load_CSP_data(pca_data_dir = pca_data_dir))
 
 
 

@@ -14,7 +14,7 @@ from astropy.cosmology import WMAP9
 
 directory = os.path.dirname(__file__)
 
-pca_vec_data_dir_old= os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1')
+# pca_vec_data_dir_old= os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1')
 pca_dr17_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', '1.1.0')
 spec_unit = 1e-17 * u.erg / u.s / u.cm**2. / u.AA
 absmag_sun_band = {'u': 6.39, 'g': 5.12, 'r': 4.64, 'i': 4.53, 'z': 4.51, 'V': 4.81}
@@ -43,7 +43,7 @@ def PCA_eigendata(vec_file = None, pca_vec_data_dir = None):
 
 
 def PCA_Spectrum(plateifu = None, filename = None, vec_file = None, 
-                vec_data = None, pca_vec_data_dir = None, pca_data_dir = None):
+                vec_data = None, pca_vec_data_dir = None):
     """
     Construct PCA spectrum from eigenvectors for specified galaxy
 
@@ -139,7 +139,7 @@ def PCA_mag(filter_obs, dapall = None, maps = None, plateifu = None, filename = 
         if plateifu is None:
             raise ValueError("No input file or plateifu provided")
         else:
-            filename = os.path.join(pca_data_dir, plateifu, "{}_res.fits".format(plateifu))
+            filename = os.path.join(pca_data_dir, "v3_1_1", "3.1.0", plateifu.split("-")[0], "mangapca-{}.fits".format(plateifu))
 
     spectrum, wlen = PCA_Spectrum(plateifu = plateifu, filename = filename, 
                                   vec_file = vec_file, vec_data = vec_data, pca_data_dir = pca_data_dir)

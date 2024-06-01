@@ -142,7 +142,7 @@ def PCA_mag(filter_obs, dapall = None, maps = None, plateifu = None, filename = 
             filename = os.path.join(pca_data_dir, "v3_1_1", "3.1.0", plateifu.split("-")[0], "mangapca-{}.fits".format(plateifu))
 
     spectrum, wlen = PCA_Spectrum(plateifu = plateifu, filename = filename, 
-                                  vec_file = vec_file, vec_data = vec_data, pca_data_dir = pca_data_dir)
+                                  vec_file = vec_file, vec_data = vec_data, pca_vec_data_dir = pca_vec_data_dir)
 
 
     mag = filter_obs.get_ab_magnitudes(spectrum, wlen, axis = 0)[filter_obs.names[0]].data * u.ABmag

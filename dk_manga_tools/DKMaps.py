@@ -1044,7 +1044,7 @@ class DKMapsMixin(object):
 
     def load_PCA_CSP(self, pca_data_dir = None):
         if not hasattr(self,"pca_csp"):
-            self.__setattr__("pca_scp",load_CSP_data(pca_data_dir = pca_data_dir))
+            self.__setattr__("pca_csp",load_CSP_data(pca_data_dir = pca_data_dir))
 
 
 

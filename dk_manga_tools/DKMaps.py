@@ -553,7 +553,7 @@ class DKMapsMixin(object):
         if pca_data_dir is None:
             pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1',
                            'v2_5_3', '2.3.0', 'results')
-        return PCA_stellar_mass(self.dapall, pca_data_dir = pca_data_dir, **kwargs)
+        return PCA_stellar_mass(plateifu = self.plateifu, pca_data_dir = pca_data_dir, **kwargs)
 
     def get_timeslice_mass(self, timeslice_dir = None, **kwargs):
         """

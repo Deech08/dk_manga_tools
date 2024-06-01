@@ -14,8 +14,8 @@ from astropy.cosmology import WMAP9
 
 directory = os.path.dirname(__file__)
 
-pca_vec_data_dir_master = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1')
-
+pca_vec_data_dir= os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1')
+pca_dr17 = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', '1.1.0')
 spec_unit = 1e-17 * u.erg / u.s / u.cm**2. / u.AA
 absmag_sun_band = {'u': 6.39, 'g': 5.12, 'r': 4.64, 'i': 4.53, 'z': 4.51, 'V': 4.81}
 
@@ -31,7 +31,7 @@ def PCA_eigendata(vec_file = None, pca_vec_data_dir = None):
     """
     if vec_file is None:
         if pca_vec_data_dir is None:
-            pca_vec_data_dir = pca_vec_data_dir_master
+            pca_vec_data_dir = pca_dr17_dir
         vec_file = os.path.join(pca_vec_data_dir, "pc_vecs-1.0.0.fits")
 
     # Load vectors:
@@ -62,7 +62,7 @@ def PCA_Spectrum(plateifu = None, filename = None, vec_file = None,
 
     if vec_data is None:
         if pca_vec_data_dir is None:
-            pca_vec_data_dir = pca_vec_data_dir_master
+            pca_vec_data_dir = pca_dr17_dir
 
         mean_spec, evec_spec, lam_spec = PCA_eigendata(vec_file = vec_file, pca_vec_data_dir = pca_vec_data_dir)
     else:
@@ -170,8 +170,9 @@ def PCA_stellar_mass(dapall, plateifu = None, filename = None, vec_file = None,
     if filename is None:
         if plateifu is None:
             plateifu = dapall["plateifu"]
-        else:
-            filename = os.path.join(pca_data_dir, plateifu, "{}_res.fits".format(plateifu))
+        if pca_data_dir is None:
+            pca_data_dir = pca_dr17_dir
+        filename = os.path.join(pca_data_dir, "v3_1_1", "3.1.0", plateifu.split("-")[0], "mangapca-{}.fits".format(plateifu))
 
 
     filter_obs = filters.load_filters("sdss2010-i")
@@ -181,9 +182,6 @@ def PCA_stellar_mass(dapall, plateifu = None, filename = None, vec_file = None,
     sun_i = absmag_sun_band["i"] * u.ABmag
     i_sol_lum = 10**(-0.4 * (i_mag_abs - sun_i).value)
 
-    # Load PCA Data for Galaxy
-    if filename is None:
-        filename = os.path.join(pca_data_dir, plateifu, "{}_res.fits".format(plateifu))
     with fits.open(filename) as pca_data:
         MLi = pca_data["MLi"].data
         mask = pca_data["MASK"].data.astype(bool)

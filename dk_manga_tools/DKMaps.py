@@ -641,7 +641,7 @@ class DKMapsMixin(object):
         if pca_data_dir is None:
             pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1',
                            'v2_5_3', '2.3.0', 'results')
-        return PCA_MLi(self.dapall, pca_data_dir = pca_data_dir, **kwargs)
+        return PCA_MLi(maps = self, pca_data_dir = pca_data_dir, **kwargs)
 
     def get_PCA_zpres_info(self, name, pca_data_dir = None, **kwargs):
         """
@@ -659,7 +659,7 @@ class DKMapsMixin(object):
         if pca_data_dir is None:
             pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1',
                            'v2_5_3', '2.3.0', 'results')
-        return PCA_mag(self.dapall, filter_obs, pca_data_dir = pca_data_dir, **kwargs)
+        return PCA_mag(maps = self, filter_obs, pca_data_dir = pca_data_dir, **kwargs)
 
 
     def get_bar_mask(self, galaxyzoo3d_dir = None, vote_threshold = None, **kwargs):

@@ -88,7 +88,7 @@ def PCA_Spectrum(plateifu = None, filename = None, vec_file = None,
 
     return spectrum, lam_spec
 
-def PCA_mag(dapall, filter_obs, plateifu = None, filename = None, vec_file = None, 
+def PCA_mag(filter_obs, dapall = None, maps = None, plateifu = None, filename = None, vec_file = None, 
                 vec_data = None, pca_data_dir = None):
     """
     Return absolute AB Magnitude in filter provided
@@ -113,7 +113,10 @@ def PCA_mag(dapall, filter_obs, plateifu = None, filename = None, vec_file = Non
 
     # CHECK PLATEIFU
     if plateifu is None:
-        plateifu = dapall["plateifu"]
+        if maps is None:
+            plateifu = dapall["plateifu"]
+        else:
+            plateifu = maps.plateifu
 
     if filter_obs.__class__ is not filters.FilterSequence:
         if filter_obs in ["GALEX-NUV", "GALEX-FUV"]:
@@ -143,11 +146,14 @@ def PCA_mag(dapall, filter_obs, plateifu = None, filename = None, vec_file = Non
 
 
     mag = filter_obs.get_ab_magnitudes(spectrum, wlen, axis = 0)[filter_obs.names[0]].data * u.ABmag
-    mag_abs = mag - WMAP9.distmod(dapall["nsa_zdist"])
+    if maps is None:
+        mag_abs = mag - WMAP9.distmod(dapall["nsa_zdist"])
+    else:
+        mag_abs = mag - WMAP9.distmod(maps.nsa["zdist"])
 
     return mag_abs
 
-def PCA_stellar_mass(dapall, plateifu = None, filename = None, vec_file = None, 
+def PCA_stellar_mass(maps = None, dapall=None, plateifu = None, filename = None, vec_file = None, 
                 vec_data = None, pca_data_dir = None, goodfrac_channel = 2, 
                 goodfrac_thresh = .0001, use_mask = True):
     """
@@ -169,7 +175,10 @@ def PCA_stellar_mass(dapall, plateifu = None, filename = None, vec_file = None,
 
     if filename is None:
         if plateifu is None:
-            plateifu = dapall["plateifu"]
+            if maps is None:
+                plateifu = dapall["plateifu"]
+            else:
+                plateifu = maps.plateifu
         if pca_data_dir is None:
             pca_data_dir = pca_dr17_dir
         filename = os.path.join(pca_data_dir, "v3_1_1", "3.1.0", plateifu.split("-")[0], "mangapca-{}.fits".format(plateifu))
@@ -203,7 +212,7 @@ def PCA_stellar_mass(dapall, plateifu = None, filename = None, vec_file = None,
 
 
 
-def PCA_MLi(dapall, plateifu = None, filename = None, pca_data_dir = None):
+def PCA_MLi(maps = None, dapall=None, plateifu = None, filename = None, pca_data_dir = None):
     """
     Return absolute Mass to Light Ratio in i-band
 
@@ -222,7 +231,10 @@ def PCA_MLi(dapall, plateifu = None, filename = None, pca_data_dir = None):
     """
     if filename is None:
         if plateifu is None:
-            plateifu = dapall["plateifu"]
+            if maps is None:
+                plateifu = dapall["plateifu"]
+            else:
+                plateifu = maps.plateifu
         else:
             filename = os.path.join(pca_data_dir, plateifu, "{}_res.fits".format(plateifu))
 
@@ -234,7 +246,7 @@ def PCA_MLi(dapall, plateifu = None, filename = None, pca_data_dir = None):
 
     return MLi
 
-def PCA_zpres_info(dapall, name, plateifu = None, filename = None, pca_data_dir = None, 
+def PCA_zpres_info(name, dapall=None, maps = None, plateifu = None, filename = None, pca_data_dir = None, 
     masked = True, goodfrac_channel = 2, 
                 goodfrac_thresh = .0001):
     """
@@ -255,7 +267,10 @@ def PCA_zpres_info(dapall, name, plateifu = None, filename = None, pca_data_dir 
     """
     if filename is None:
         if plateifu is None:
-            plateifu = dapall["plateifu"]
+            if maps is None:
+                plateifu = dapall["plateifu"]
+            else:
+                plateifu = maps.plateifu
         else:
             filename = os.path.join(pca_data_dir, plateifu, "{}_zpres.fits".format(plateifu))
 

@@ -550,7 +550,7 @@ class DKMapsMixin(object):
         """
         Return PCA Stellar Mass map with errors in u.solmass
         """
-        return PCA_stellar_mass(plateifu = self.plateifu, pca_data_dir = pca_data_dir, **kwargs)
+        return PCA_stellar_mass(plateifu = self.plateifu, maps = self, pca_data_dir = pca_data_dir, **kwargs)
 
     def get_timeslice_mass(self, timeslice_dir = None, **kwargs):
         """

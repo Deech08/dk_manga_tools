@@ -292,7 +292,7 @@ def PCA_info(maps, name, dapall = None, plateifu = None, filename = None, pca_da
             maps = DKMaps(plateifu)
 
         if not hasattr(maps, "pca_csp"):
-            maps.load_CSP_data(pca_data_dir = pca_data_dir)
+            maps.load_PCA_CSP(pca_data_dir = pca_data_dir)
 
         info = np.array([maps.pca_csp[name][ell] for ell in modelnum])
 
@@ -403,6 +403,7 @@ def load_CSP_data(pca_data_dir = None):
     Cgr = []
     Cri = []
     Cgi = []
+    logQHpersolmass = []
 
     for i in range(0,40):
         with fits.open(os.path.join(pca_data_dir, "CSPs", "CSPs_{}.fits".format(i))) as csps:
@@ -440,6 +441,7 @@ def load_CSP_data(pca_data_dir = None):
             Cgr.append(csps[1].data['Cgr'])
             Cri.append(csps[1].data['Cri'])
             Cgi.append(csps[1].data['Cgi'])
+            logQHpersolmass.append(csps[1].data['logQHpersolmass'])
 
     A_csps = np.hstack(A_csps)
     d1 = np.hstack(d1)
@@ -475,6 +477,7 @@ def load_CSP_data(pca_data_dir = None):
     Cgr = np.hstack(Cgr)
     Cri = np.hstack(Cri)
     Cgi = np.hstack(Cgi)
+    logQHpersolmass = np.hstack(logQHpersolmass)
 
 
     return Table({
@@ -511,6 +514,7 @@ def load_CSP_data(pca_data_dir = None):
         "Cgr":Cgr,
         "Cri":Cri,
         "Cgi":Cgi,
+        "logQHpersolmass":logQHpersolmass
         })
 
 

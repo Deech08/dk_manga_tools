@@ -27,7 +27,7 @@ import glob
 from .pca import PCA_stellar_mass
 from .pca import PCA_MLi
 from .pca import PCA_zpres_info
-from .pca import PCA_mag, load_CSP_data
+from .pca import PCA_mag, load_CSP_data, PCA_info
 from .gz3d_fits import gz3d_fits
 from .pipe3d import load_PIPE3D_SSP
 
@@ -637,6 +637,12 @@ class DKMapsMixin(object):
         """
         return PCA_MLi(maps = self, pca_data_dir = pca_data_dir, **kwargs)
 
+    def get_PCA_info(self, name, pca_data_dir = None, **kwargs):
+        """
+        Return additional specified info from PCA
+        """
+        return PCA_info(name, maps = self, plateifu = self.plateifu, pca_data_dir = pca_data_dir, **kwargs)
+
     def get_PCA_zpres_info(self, name, pca_data_dir = None, **kwargs):
         """
         Return additional specified info from PCA
@@ -1045,6 +1051,8 @@ class DKMapsMixin(object):
     def load_PCA_CSP(self, pca_data_dir = None):
         if not hasattr(self,"pca_csp"):
             self.__setattr__("pca_csp",load_CSP_data(pca_data_dir = pca_data_dir))
+
+
 
 
 

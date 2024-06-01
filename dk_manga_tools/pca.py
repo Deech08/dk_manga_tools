@@ -11,7 +11,6 @@ import os
 from speclite import filters
 from astropy.cosmology import WMAP9
 from astropy.table import Table
-from .DKMaps import DKMaps
 
 
 directory = os.path.dirname(__file__)
@@ -254,7 +253,7 @@ def PCA_MLi(maps = None, dapall=None, plateifu = None, filename = None, pca_data
 
     return MLi
 
-def PCA_info(name, maps = None, dapall = None, plateifu = None, filename = None, pca_data_dir = None, 
+def PCA_info(maps, name, dapall = None, plateifu = None, filename = None, pca_data_dir = None, 
     masked = True, goodfrac_channel = 2, goodfrac_thresh = 0.0001):
     """
     Return specific PCA CSP based info

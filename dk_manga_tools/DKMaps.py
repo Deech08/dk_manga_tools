@@ -641,7 +641,7 @@ class DKMapsMixin(object):
         """
         Return additional specified info from PCA
         """
-        return PCA_info(name, maps = self, plateifu = self.plateifu, pca_data_dir = pca_data_dir, **kwargs)
+        return PCA_info(self, name, plateifu = self.plateifu, pca_data_dir = pca_data_dir, **kwargs)
 
     def get_PCA_zpres_info(self, name, pca_data_dir = None, **kwargs):
         """

@@ -650,7 +650,7 @@ class DKMapsMixin(object):
         if pca_data_dir is None:
             pca_data_dir = os.path.join(os.environ['SAS_BASE_DIR'], 'dr17', 'manga', 'spectro', 'mangapca', 'CSPs_CKC14_MaNGA_20190215-1',
                            'v2_5_3', '2.3.0', 'results')
-        return PCA_zpres_info(self.dapall, name, pca_data_dir = pca_data_dir, **kwargs)
+        return PCA_zpres_info(None, name, plateifu = self.plateifu, pca_data_dir = pca_data_dir, **kwargs)
 
     def get_PCA_mag(self, filter_obs, pca_data_dir = None, **kwargs):
         """

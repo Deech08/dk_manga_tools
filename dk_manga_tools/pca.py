@@ -426,20 +426,18 @@ def load_CSP_data(pca_data_dir = None):
     Cgr = np.hstack(Cgr)
     Cri = np.hstack(Cri)
     Cgi = np.hstack(Cgi)
-    print(A_csps.shape)
-    print(d1.shape)
-    print(mwa.shape)
+
 
     return Table({
-        "A":A_csps, 
+        "A":A_csps.T, 
         "d1":d1,
-        "dtb":dtb,
+        "dtb":dtb.T,
         "fbhb":fbhb,
         "gamma":gamma,
         "logzsol":logzsol,
         "nburst":nburst,
         "sbss":sbss,
-        "tb":tb,
+        "tb":tb.T,
         "tf":tf,
         "theta":theta,
         "tt":tt,

@@ -185,7 +185,7 @@ def PCA_stellar_mass(maps = None, dapall=None, plateifu = None, filename = None,
 
 
     filter_obs = filters.load_filters("sdss2010-i")
-    i_mag_abs = PCA_mag(dapall, filter_obs, plateifu = plateifu, filename = filename, 
+    i_mag_abs = PCA_mag(filter_obs, maps = maps, dapall = dapall, plateifu = plateifu, filename = filename, 
                         vec_file = vec_file, vec_data = vec_data, pca_data_dir = pca_data_dir)
 
     sun_i = absmag_sun_band["i"] * u.ABmag

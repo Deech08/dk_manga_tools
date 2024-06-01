@@ -286,7 +286,7 @@ def PCA_info(maps, name, dapall = None, plateifu = None, filename = None, pca_da
         modelnum = pca_data["MODELNUM"].data
 
         galmask = mask == 0
-        galmask &= goodfrac[goodfrac_channel] > goodfrac_thresh
+        galmask &= good_frac[goodfrac_channel] > goodfrac_thresh
 
         if maps is None:
             maps = DKMaps(plateifu)

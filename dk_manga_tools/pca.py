@@ -189,18 +189,19 @@ def PCA_stellar_mass(maps = None, dapall=None, plateifu = None, filename = None,
         filename = os.path.join(pca_data_dir, "v3_1_1", "3.1.0", plateifu.split("-")[0], "mangapca-{}.fits".format(plateifu))
 
 
-    filter_obs = filters.load_filters("sdss2010-i")
-    i_mag_abs = PCA_mag(filter_obs, maps = maps, dapall = dapall, plateifu = plateifu, filename = filename, 
-                        vec_file = vec_file, vec_data = vec_data, pca_data_dir = pca_data_dir)
+    # filter_obs = filters.load_filters("sdss2010-i")
+    # i_mag_abs = PCA_mag(filter_obs, maps = maps, dapall = dapall, plateifu = plateifu, filename = filename, 
+    #                     vec_file = vec_file, vec_data = vec_data, pca_data_dir = pca_data_dir)
 
-    sun_i = absmag_sun_band["i"] * u.ABmag
-    i_sol_lum = 10**(-0.4 * (i_mag_abs - sun_i).value)
+    # sun_i = absmag_sun_band["i"] * u.ABmag
+    # i_sol_lum = 10**(-0.4 * (i_mag_abs - sun_i).value)
 
     with fits.open(filename) as pca_data:
         MLi = pca_data["MLi"].data
+        log_lum_i = pca_data["LOG_LUM_I"].data
         mask = pca_data["MASK"].data.astype(bool)
         goodfrac = pca_data["GOODFRAC"].data[goodfrac_channel]
-    m_star = i_sol_lum * 10**MLi
+    m_star = 10**log_lum_i * 10**MLi
     mask = mask | (goodfrac < goodfrac_thresh )
 
     mask_shaped = np.zeros_like(m_star, dtype = bool)

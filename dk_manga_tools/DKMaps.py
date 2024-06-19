@@ -573,8 +573,8 @@ class DKMapsMixin(object):
 
         inclination = np.arccos(
           np.sqrt(
-            (self.dapall['nsa_elpetro_ba']**2. - alpha**2.)/(1 - alpha**2.)))
-        D = self.dapall["nsa_zdist"] * constants.c / WMAP9.H0
+            (self.nsa['elpetro_ba']**2. - alpha**2.)/(1 - alpha**2.)))
+        D = self.nsa["zdist"] * constants.c / WMAP9.H0
         proj_pix_area = wcs.utils.proj_plane_pixel_area(self.wcs) *u.deg**2
 
         return (proj_pix_area.to(u.sr).value * D**2).to(u.pc**2) / np.cos(inclination)

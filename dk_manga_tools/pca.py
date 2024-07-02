@@ -303,7 +303,7 @@ def PCA_info(name, plateifu = None, basis = None, pcatraining = None, filename =
                 )
             )
         ca = pca_data["CALPHA"].data
-        ca_prec = pca_data["CALPHA_PREC"]
+        ca_prec = pca_data["CALPHA_PREC"].data
 
     if (basis is None) | (pcatraining is None):
         #load pca training and basis data

@@ -14,6 +14,10 @@ from astropy.table import Table
 
 from functools import cached_property
 
+from scipy import interpolate
+
+
+
 
 
 directory = os.path.dirname(__file__)

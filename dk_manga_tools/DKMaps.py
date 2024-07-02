@@ -28,6 +28,7 @@ from .pca import PCA_stellar_mass
 from .pca import PCA_MLi
 from .pca import PCA_zpres_info
 from .pca import PCA_mag, load_CSP_data, PCA_info
+from .pca import load_PCA_data, LikelihoodCube
 from .gz3d_fits import gz3d_fits
 from .pipe3d import load_PIPE3D_SSP
 
@@ -637,11 +638,13 @@ class DKMapsMixin(object):
         """
         return PCA_MLi(maps = self, pca_data_dir = pca_data_dir, **kwargs)
 
-    def get_PCA_info(self, name, pca_data_dir = None, **kwargs):
+    def get_PCA_info(self, name, pca_data_dir = None, basis = None, pcatraining = None, **kwargs):
         """
         Return additional specified info from PCA
+
+        For faster performace, provided basis and pcatraining as keywords, otherwise function will automatically read them
         """
-        return PCA_info(self, name, plateifu = self.plateifu, pca_data_dir = pca_data_dir, **kwargs)
+        return PCA_info(name, plateifu = self.plateifu, pca_data_dir = pca_data_dir, basis = basis, pcatraining = pcatraining, **kwargs)
 
     def get_PCA_zpres_info(self, name, pca_data_dir = None, **kwargs):
         """

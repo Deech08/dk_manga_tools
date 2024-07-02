@@ -12,6 +12,9 @@ from speclite import filters
 from astropy.cosmology import WMAP9
 from astropy.table import Table
 
+from functools import cached_property
+
+
 
 directory = os.path.dirname(__file__)
 
@@ -254,8 +257,8 @@ def PCA_MLi(maps = None, dapall=None, plateifu = None, filename = None, pca_data
 
     return MLi
 
-def PCA_info(maps, name, dapall = None, plateifu = None, filename = None, pca_data_dir = None, 
-    masked = True, goodfrac_channel = 2, goodfrac_thresh = 0.0001):
+def PCA_info(name, plateifu = None, basis = None, pcatraining = None, filename = None, maps = None, pca_data_dir = None, 
+    return_unc = True, goodfrac_channel = 2, goodfrac_thresh = 1.0e-4):
     """
     Return specific PCA CSP based info
 
@@ -264,6 +267,14 @@ def PCA_info(maps, name, dapall = None, plateifu = None, filename = None, pca_da
     name: `string`
         name of info to get from PCA data, 
         see https://data.sdss.org/datamodel/files/MANGA_PCA/PCAY_VER/CSPs/CSPs.html
+    plateifu: `string`
+        plate-ifu of galaxy to read
+        Must either provide this, or a filename to read, or maps object to get info from
+    filename: `string`
+        filename of mangapca_results to read
+    return_unc: `bool`
+        if True, also returns parameter uncertainty - otherwise only median value
+
     """
 
     if pca_data_dir is None:
@@ -272,7 +283,7 @@ def PCA_info(maps, name, dapall = None, plateifu = None, filename = None, pca_da
     if filename is None:
         if plateifu is None:
             if maps is None:
-                plateifu = dapall["plateifu"]
+                raise(ValueError("Must specify either plateifu, filename, or maps keyword"))
             else:
                 plateifu = maps.plateifu
         else:
@@ -281,26 +292,32 @@ def PCA_info(maps, name, dapall = None, plateifu = None, filename = None, pca_da
     # get main info
     with fits.open(filename) as pca_data:
         header = pca_data[0].header
-        mask = pca_data["MASK"].data 
-        mask_header = pca_data["MASK"].header  
-        good_frac = pca_data["GOODFRAC"].data
-        modelnum = pca_data["MODELNUM"].data
+        mask = np.logical_or.reduce((
+                ~pca_data["SUCCESS"].data.astype(bool), 
+                pca_data["MASK"].data.astype(bool), 
+                pca_data["GOODFRAC"].data[goodfrac_channel,...] < goodfrac_thresh
+                )
+            )
+        ca = pca_data["CALPHA"].data
+        ca_prec = pca_data["CALPHA_PREC"]
 
-        galmask = mask == 0
-        galmask &= good_frac[goodfrac_channel] > goodfrac_thresh
+    if (basis is None) | (pcatraining is None):
+        #load pca training and basis data
+        basis, pcatraining = load_PCA_data(pca_data_dir = pca_data_dir)
 
-        if maps is None:
-            maps = DKMaps(plateifu)
+    likelihoodcube = LikelihoodCube(ca, ca_prec, mask, ca_sim = basis.transform(pcatraining.spec),
+        simtab=pcatraining.tab)
 
-        if not hasattr(maps, "pca_csp"):
-            maps.load_PCA_CSP(pca_data_dir = pca_data_dir)
+    pctls = likelihoodcube.make_qty_pctl_map(name, [16., 50., 84.], mask = mask)
+    med = np.ma.array(pctls[1,...], mask = mask)
+    unc = np.ma.array(0.5 * (pcts[2,...] - pctls[0,...]), mask = mask)
 
-        info = np.array([maps.pca_csp[name][ell] for ell in modelnum])
+    if return_unc:
+        return med, unc
+    else:
+        return med
 
-        if masked:
-            return np.ma.masked_array(data = info, mask = ~galmask)
-        else:
-            return info
+
 
 
 def PCA_zpres_info(name, dapall=None, maps = None, plateifu = None, filename = None, pca_data_dir = None, 
@@ -518,6 +535,221 @@ def load_CSP_data(pca_data_dir = None):
         "logQHpersolmass":logQHpersolmass
         })
 
+
+
+# Based on Zach's Code:
+def load_PCA_data(pca_data_dir = None):
+    if pca_data_dir is None:
+        pca_data_dir = pca_dr17_dir
+
+    basis = PCABasis.from_fits(os.path.join(pca_data_dir, "pc_vecs-1.1.0.fits"))
+    pcatraining = PCATraining.from_filebases(
+        os.path.join(pca_data_dir, "CSPs", "CSPs_{}.fits"), fsuffixes=range(40)
+        ).to_waverange(basis.lam).to_medianscaled()
+
+    # Fix log scaling when needed
+    log_fix_pars = ["MLr", "MLi", "MLz", "MLV"]
+    for par in log_fix_pars:
+        pcatraining.tab[par] = np.log10(pcatraining.tab[par])
+
+    return basis, pcatraining
+
+
+
+
+
+from astropy import table as t
+
+import os
+
+eps = np.finfo(np.float).eps
+
+class PCABasis(object):
+    def __init__(self, lam, M, E):
+        self.M, self.E, self.lam = M, E, lam
+
+    def transform(self, S):
+        return (S - self.M) @ self.E.T
+
+    def transform_inverse(self, A):
+        return (A @ self.E) + self.M[None, :]
+
+    @classmethod
+    def from_fits(cls, fname):
+        with fits.open(fname) as f:
+            lam = f['LAM'].data
+            mean = f['MEAN'].data
+            evecs = f['EVECS'].data
+
+        return cls(lam, mean, evecs)
+
+class PCATraining(object):
+    def __init__(self, tab, lam, spec):
+        self.tab, self.lam, self.spec = tab, lam, spec
+
+    @staticmethod
+    def load_tab_lam_spec(fname):
+        with fits.open(fname) as f:
+            lam, spec = f['lam'].data, f['flam'].data
+
+        tab = t.Table.read(fname)
+
+        return tab, lam, spec
+
+    @classmethod
+    def from_filebases(cls, fstem='CSPs_{}.fits', fsuffixes=range(1)):
+        tab, lam, spec = zip(*[PCATraining.load_tab_lam_spec(fstem.format(suff))
+                               for suff in fsuffixes])
+        tab = t.vstack(tab)
+        lam = lam[-1]
+        spec = np.row_stack(spec)
+        med = np.median(spec, axis=1, keepdims=True)
+
+        return cls(tab, lam, spec / med)
+
+    def __repr__(self):
+        nspec, nwave = self.spec.shape
+        nprop = len(self.tab.colnames)
+        return f'PCA Training Data: {nspec} spectra, {nwave} wave channels, {nprop} intrinsic properties'
+
+    def to_waverange(self, wave_new, lscale='log10'):
+        if lscale == 'log10':
+            x = np.log10(self.lam)
+            xnew = np.log10(wave_new)
+        elif lscale in ['ln', 'loge']:
+            x = np.log(self.lam)
+            xnew = np.log(wave_new)
+        elif lscale in ['linear', 'lin']:
+            x = self.lam
+            xnew = wave_new
+        else:
+            raise ValueError('wavelength scale must be log10, ln/loge, or linear/lin')
+
+        interp = interpolate.interp1d(x=x, y=self.spec, kind='linear',
+                                      axis=1)
+
+        spec_new = interp(xnew)
+
+        return PCATraining(self.tab, wave_new, spec_new)
+
+    def to_medianscaled(self):
+        return PCATraining(
+            self.tab, self.lam,
+            self.spec / np.median(self.spec, axis=1, keepdims=True))
+
+
+class LikelihoodCube(object):
+    """constructs simulation likelihood cubes for IFU data
+    
+    Arguments
+    ---------
+    res : fits.HDUList
+        HDUList of PCA output data
+    ca_sim : np.array
+        array containing PC amplitudes of all simulations, shape (# sims, # PCs)
+    simtab : astropy.table.Table
+        table containing data about the simulations in columns
+    *args, **kwargs
+        passed to fits.HDUList
+    """
+    
+    def __init__(self, ca, ca_prec, mask, ca_sim, simtab=None, *args, **kwargs):
+        
+        # store simtab
+        self.ca = ca
+        self.ca_prec = ca_prec
+        self.mask = mask
+        self.simtab = simtab
+        self.ca_sim = ca_sim
+        self.nsim, self.q = ca_sim.shape
+        
+    @cached_property
+    def dist2(self):
+        # PC amplitude difference between models and data
+        dca_sims_data = self.ca_sim[..., None, None] - self.ca[None, ...]
+        # use Mahalanobis distance metric
+        dist2 = np.einsum(
+            'cixy,ijxy,cjxy->cxy', dca_sims_data, self.ca_prec, dca_sims_data)
+        return dist2
+    
+    @cached_property
+    def detKpc(self):
+        # determinant of covariance matrix is inverse of precision's determinant
+        # there's also some shape jiggery-pokery, in order to make numpy take the right det.
+        det = 1. / np.linalg.det(
+            np.moveaxis(self.ca_prec, [0, 1, 2, 3], [2, 3, 0, 1]))
+        return det
+        
+    @cached_property
+    def logl(self):
+        dist2 = self.dist2
+        det = self.detKpc
+        c = 0.5 * (np.log(det) + self.q * np.log(2. * np.pi))
+        logl = -0.5 * dist2 - c
+        return logl
+    
+    def make_qty_pctl_map(self, qtyname, pctls, mask=None, order=None, factor=None, add=None):
+        """make a map of some quantity in self.simtab, based on known model likelihoods
+        
+        Arguments
+        ---------
+        - qtyname : str
+            name of some column in self.simtab, denoting a property of the set of simulations
+        - pctls : float, one-dimensional array
+            percentile(s) to compute
+        - mask : array of bools
+            map of spaxel masks: computation will skip where true
+        - order : np.array, None
+            sorted order of qty
+        - factor, add : float, array
+            number to multiply or add to the result (rarely used)
+        """
+        _, *map_shape = self.logl.shape
+        Q = self.simtab[qtyname]
+        
+        if factor is None:
+            factor = np.ones(map_shape)
+        
+        if add is None:
+            add = np.zeros(map_shape)
+        
+        if mask is None:
+            mask = np.zeros(map_shape)
+            
+        A = param_interp_map(v=Q, w=np.exp(self.logl), pctl=np.array(pctls), mask=mask, order=order)
+        
+        return (A + add[None, ...]) * factor[None, ...]
+
+# @numba.jit
+def param_interp_map(v, w, pctl, mask, order=None):
+    '''interpolates probabilities along the first cube axis, to find percentiles
+    '''
+    if order is None:
+        order = np.argsort(v)
+
+    v_o = v[order]
+    w_sum = w.sum(axis=0, keepdims=True)
+    w = w + eps * np.isclose(w_sum, 0, atol=eps)
+
+    w_o = w[order] + eps
+
+    cumpctl = 100. * (np.cumsum(w_o, axis=0) - 0.5 * w_o) / w_sum
+
+    vals_at_pctls = np.zeros(np.array(pctl).shape + mask.shape)
+
+    for i, j in np.ndindex(mask.shape):
+        # don't bother where there's a mask
+        if mask[i, j]:
+            continue
+
+        ix_rhs = np.searchsorted(cumpctl[:, i, j], pctl, side='right')
+        ix_lhs = ix_rhs - 1
+
+        v_lhs, v_rhs = v_o[ix_lhs], v_o[ix_rhs]
+        p_lhs, p_rhs = cumpctl[ix_lhs, i, j], cumpctl[ix_rhs, i, j]
+        vals_at_pctls[:, i, j] = v_lhs + ((pctl - p_lhs) / (p_rhs - p_lhs)) * (v_rhs - v_lhs)
+
+    return vals_at_pctls
 
 
 

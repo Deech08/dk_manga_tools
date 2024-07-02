@@ -562,7 +562,7 @@ from astropy import table as t
 
 import os
 
-eps = np.finfo(np.float).eps
+eps = np.finfo(np.float64).eps
 
 class PCABasis(object):
     def __init__(self, lam, M, E):

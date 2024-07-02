@@ -314,7 +314,7 @@ def PCA_info(name, plateifu = None, basis = None, pcatraining = None, filename =
 
     pctls = likelihoodcube.make_qty_pctl_map(name, [16., 50., 84.], mask = mask)
     med = np.ma.array(pctls[1,...], mask = mask)
-    unc = np.ma.array(0.5 * (pcts[2,...] - pctls[0,...]), mask = mask)
+    unc = np.ma.array(0.5 * (pctls[2,...] - pctls[0,...]), mask = mask)
 
     if return_unc:
         return med, unc

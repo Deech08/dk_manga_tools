@@ -219,7 +219,7 @@ def PCA_stellar_mass(maps = None, dapall=None, plateifu = None, filename = None,
     else:
         mask_shaped = mask
 
-    m_star_masked = np.ma.masked_array(m_star * u.solMass, mask = mask_shaped)
+    m_star_masked = np.ma.masked_array(m_star, mask = mask_shaped)
 
     return m_star_masked
 

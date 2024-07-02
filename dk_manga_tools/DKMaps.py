@@ -587,7 +587,7 @@ class DKMapsMixin(object):
         m_star = self.get_PCA_stellar_mass(**kwargs)
         area = self.get_deproj_pixel_area()
 
-        smsd = np.ma.masked_array(data = m_star/area, mask = m_star.mask)
+        smsd = np.ma.masked_array(data = m_star/area.value, mask = m_star.mask)
         return m_star / area
 
     def get_timeslice_mass_density(self, **kwargs):

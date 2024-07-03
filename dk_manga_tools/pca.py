@@ -749,6 +749,7 @@ def param_interp_map(v, w, pctl, mask, use_jax = False, order=None):
     v_o = v[order]
     w_sum = w.sum(axis=0, keepdims=True)
     if use_jax:
+        import jax.numpy as jnp
         w = w + eps * jnp.isclose(w_sum, 0, atol=eps)
         w_o = w[order] + eps
         cumpctl = 100. * (jnp.cumsum(w_o, axis=0) - 0.5 * w_o) / w_sum

@@ -681,8 +681,7 @@ class LikelihoodCube(object):
                                         self.ca[None, ...].astype(float))
             dist2 = jnp.einsum(
             'cixy,ijxy,cjxy->cxy', dca_sims_data, self.ca_prec.astype(float), dca_sims_data)
-            from jax import clear_caches
-            clear_caches()
+
         else:
             dca_sims_data = self.ca_sim[..., None, None] - self.ca[None, ...]
             # use Mahalanobis distance metric
@@ -736,8 +735,7 @@ class LikelihoodCube(object):
         if self.use_jax:
             import jax.numpy as jnp
             A = param_interp_map(v=Q, w=jnp.exp(self.logl), pctl=np.array(pctls), mask=mask, order=order, use_jax = self.use_jax)
-            from jax import clear_caches
-            clear_caches()
+            
         else:
             A = param_interp_map(v=Q, w=np.exp(self.logl), pctl=np.array(pctls), mask=mask, order=order)
         
@@ -771,8 +769,7 @@ def param_interp_map(v, w, pctl, mask, use_jax = False, order=None):
             v_lhs, v_rhs = v_o[ix_lhs], v_o[ix_rhs]
             p_lhs, p_rhs = cumpctl[ix_lhs, i, j], cumpctl[ix_rhs, i, j]
             vals_at_pctls[:, i, j] = v_lhs + ((pctl - p_lhs) / (p_rhs - p_lhs)) * (v_rhs - v_lhs)
-        from jax import clear_caches
-        clear_caches()
+        
     else:
 
         w = w + eps * np.isclose(w_sum, 0, atol=eps)

@@ -262,7 +262,7 @@ def PCA_MLi(maps = None, dapall=None, plateifu = None, filename = None, pca_data
     return MLi
 
 def PCA_info(name, plateifu = None, basis = None, pcatraining = None, filename = None, maps = None, pca_data_dir = None, 
-    return_unc = True, goodfrac_channel = 2, goodfrac_thresh = 1.0e-4):
+    return_unc = True, goodfrac_channel = 2, goodfrac_thresh = 1.0e-4, use_jax = False):
     """
     Return specific PCA CSP based info
 
@@ -310,7 +310,7 @@ def PCA_info(name, plateifu = None, basis = None, pcatraining = None, filename =
         basis, pcatraining = load_PCA_data(pca_data_dir = pca_data_dir)
 
     likelihoodcube = LikelihoodCube(ca, ca_prec, mask, ca_sim = basis.transform(pcatraining.spec),
-        simtab=pcatraining.tab)
+        simtab=pcatraining.tab, use_jax = use_jax)
 
     pctls = likelihoodcube.make_qty_pctl_map(name, [16., 50., 84.], mask = mask)
     med = np.ma.array(pctls[1,...], mask = mask)

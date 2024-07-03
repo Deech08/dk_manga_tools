@@ -676,6 +676,7 @@ class LikelihoodCube(object):
     def dist2(self):
         # PC amplitude difference between models and data
         if self.use_jax:
+            import jax.numpy as jnp
             dca_sims_data =jnp.subtract(self.ca_sim[..., None, None].astype(float),
                                         self.ca[None, ...].astype(float))
             dist2 = jnp.einsum(

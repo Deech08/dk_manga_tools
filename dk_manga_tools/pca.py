@@ -732,6 +732,7 @@ class LikelihoodCube(object):
         if mask is None:
             mask = np.zeros(map_shape)
         if self.use_jax:
+            import jax.numpy as jnp
             A = param_interp_map(v=Q, w=jnp.exp(self.logl), pctl=np.array(pctls), mask=mask, order=order, use_jax = self.use_jax)
         else:
             A = param_interp_map(v=Q, w=np.exp(self.logl), pctl=np.array(pctls), mask=mask, order=order)

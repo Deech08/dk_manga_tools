@@ -659,7 +659,7 @@ class LikelihoodCube(object):
         passed to fits.HDUList
     """
     
-    def __init__(self, ca, ca_prec, mask, ca_sim, simtab=None, , use_jax = False, *args, **kwargs):
+    def __init__(self, ca, ca_prec, mask, ca_sim, simtab=None, use_jax = False, *args, **kwargs):
         
         # store simtab
         self.ca = ca

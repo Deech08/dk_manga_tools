@@ -669,7 +669,7 @@ class LikelihoodCube(object):
         self.ca_sim = ca_sim
         self.nsim, self.q = ca_sim.shape
         self.use_jax = use_jax
-        if self.use_jax
+        if self.use_jax:
             import jax.numpy as jnp
         
     @cached_property

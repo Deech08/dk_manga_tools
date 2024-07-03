@@ -731,14 +731,14 @@ class LikelihoodCube(object):
         if mask is None:
             mask = np.zeros(map_shape)
         if self.use_jax:
-            A = param_interp_map(v=Q, w=jnp.exp(self.logl), pctl=np.array(pctls), mask=mask, order=order)
+            A = param_interp_map(v=Q, w=jnp.exp(self.logl), pctl=np.array(pctls), mask=mask, order=order, use_jax = self.use_jax)
         else:
             A = param_interp_map(v=Q, w=np.exp(self.logl), pctl=np.array(pctls), mask=mask, order=order)
         
         return (A + add[None, ...]) * factor[None, ...]
 
 # @numba.jit
-def param_interp_map(v, w, pctl, mask, order=None):
+def param_interp_map(v, w, pctl, mask, use_jax = False, order=None):
     '''interpolates probabilities along the first cube axis, to find percentiles
     '''
     if order is None:
@@ -746,7 +746,7 @@ def param_interp_map(v, w, pctl, mask, order=None):
 
     v_o = v[order]
     w_sum = w.sum(axis=0, keepdims=True)
-    if self.use_jax:
+    if use_jax:
         w = w + eps * jnp.isclose(w_sum, 0, atol=eps)
         w_o = w[order] + eps
         cumpctl = 100. * (jnp.cumsum(w_o, axis=0) - 0.5 * w_o) / w_sum

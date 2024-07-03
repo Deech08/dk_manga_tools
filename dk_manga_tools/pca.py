@@ -653,11 +653,13 @@ class LikelihoodCube(object):
         array containing PC amplitudes of all simulations, shape (# sims, # PCs)
     simtab : astropy.table.Table
         table containing data about the simulations in columns
+    use_jax: bool
+        if True, will use jax to try to speed up math
     *args, **kwargs
         passed to fits.HDUList
     """
     
-    def __init__(self, ca, ca_prec, mask, ca_sim, simtab=None, *args, **kwargs):
+    def __init__(self, ca, ca_prec, mask, ca_sim, simtab=None, , use_jax = False, *args, **kwargs):
         
         # store simtab
         self.ca = ca
@@ -666,14 +668,23 @@ class LikelihoodCube(object):
         self.simtab = simtab
         self.ca_sim = ca_sim
         self.nsim, self.q = ca_sim.shape
+        self.use_jax = use_jax
+        if self.use_jax
+            import jax.numpy as jnp
         
     @cached_property
     def dist2(self):
         # PC amplitude difference between models and data
-        dca_sims_data = self.ca_sim[..., None, None] - self.ca[None, ...]
-        # use Mahalanobis distance metric
-        dist2 = np.einsum(
-            'cixy,ijxy,cjxy->cxy', dca_sims_data, self.ca_prec, dca_sims_data)
+        if self.use_jax:
+            dca_sims_data =jnp.subtract(self.ca_sim[..., None, None].astype(float),
+                                        self.ca[None, ...].astype(float))
+            dist2 = jnp.einsum(
+            'cixy,ijxy,cjxy->cxy', dca_sims_data, self.ca_prec.astype(float), dca_sims_data)
+        else:
+            dca_sims_data = self.ca_sim[..., None, None] - self.ca[None, ...]
+            # use Mahalanobis distance metric
+            dist2 = np.einsum(
+                'cixy,ijxy,cjxy->cxy', dca_sims_data, self.ca_prec, dca_sims_data)
         return dist2
     
     @cached_property
@@ -719,8 +730,10 @@ class LikelihoodCube(object):
         
         if mask is None:
             mask = np.zeros(map_shape)
-            
-        A = param_interp_map(v=Q, w=np.exp(self.logl), pctl=np.array(pctls), mask=mask, order=order)
+        if self.use_jax:
+            A = param_interp_map(v=Q, w=jnp.exp(self.logl), pctl=np.array(pctls), mask=mask, order=order)
+        else:
+            A = param_interp_map(v=Q, w=np.exp(self.logl), pctl=np.array(pctls), mask=mask, order=order)
         
         return (A + add[None, ...]) * factor[None, ...]
 
@@ -733,35 +746,42 @@ def param_interp_map(v, w, pctl, mask, order=None):
 
     v_o = v[order]
     w_sum = w.sum(axis=0, keepdims=True)
-    w = w + eps * np.isclose(w_sum, 0, atol=eps)
+    if self.use_jax:
+        w = w + eps * jnp.isclose(w_sum, 0, atol=eps)
+        w_o = w[order] + eps
+        cumpctl = 100. * (jnp.cumsum(w_o, axis=0) - 0.5 * w_o) / w_sum
+        cumpctl = np.asarray(cumpctl)
+        vals_at_pctls = np.zeros(np.array(pctl).shape + mask.shape)
 
-    w_o = w[order] + eps
+        for i, j in np.ndindex(mask.shape):
+            # don't bother where there's a mask
+            if mask[i, j]:
+                continue
 
-    cumpctl = 100. * (np.cumsum(w_o, axis=0) - 0.5 * w_o) / w_sum
+            ix_rhs = np.searchsorted(cumpctl[:, i, j], pctl, side='right')
+            ix_lhs = ix_rhs - 1
 
-    vals_at_pctls = np.zeros(np.array(pctl).shape + mask.shape)
+            v_lhs, v_rhs = v_o[ix_lhs], v_o[ix_rhs]
+            p_lhs, p_rhs = cumpctl[ix_lhs, i, j], cumpctl[ix_rhs, i, j]
+            vals_at_pctls[:, i, j] = v_lhs + ((pctl - p_lhs) / (p_rhs - p_lhs)) * (v_rhs - v_lhs)
+    else:
 
-    # for i, j in np.ndindex(mask.shape):
-    #     # don't bother where there's a mask
-    #     if mask[i, j]:
-    #         continue
+        w = w + eps * np.isclose(w_sum, 0, atol=eps)
 
-    #     ix_rhs = np.searchsorted(cumpctl[:, i, j], pctl, side='right')
-    #     ix_lhs = ix_rhs - 1
+        w_o = w[order] + eps
 
-    #     v_lhs, v_rhs = v_o[ix_lhs], v_o[ix_rhs]
-    #     p_lhs, p_rhs = cumpctl[ix_lhs, i, j], cumpctl[ix_rhs, i, j]
-    #     vals_at_pctls[:, i, j] = v_lhs + ((pctl - p_lhs) / (p_rhs - p_lhs)) * (v_rhs - v_lhs)
+        vals_at_pctls = np.zeros(np.array(pctl).shape + mask.shape)
 
-    for i,j in np.ndindex(mask.shape):
-        if mask[i,j]:
-            continue
-        cps = 100. * (np.cumsum(w_o[:,i,j]) - 0.5 * w_o[:,i,j]) / w_sum[:,i,j]
-        ix_rhs = np.searchsorted(cps, pctl, side = "right")
-        ix_lhs = ix_rhs -1
-        v_lhs, v_rhs = v_o[ix_lhs], v_o[ix_rhs]
-        p_lhs, p_rhs = cps[ix_lhs], cps[ix_rhs]
-        vals_at_pctls[:, i,j] = v_lhs + ((pctl - p_lhs) / (p_rhs - p_lhs)) * (v_rhs - v_lhs)
+
+        for i,j in np.ndindex(mask.shape):
+            if mask[i,j]:
+                continue
+            cps = 100. * (np.cumsum(w_o[:,i,j]) - 0.5 * w_o[:,i,j]) / w_sum[:,i,j]
+            ix_rhs = np.searchsorted(cps, pctl, side = "right")
+            ix_lhs = ix_rhs -1
+            v_lhs, v_rhs = v_o[ix_lhs], v_o[ix_rhs]
+            p_lhs, p_rhs = cps[ix_lhs], cps[ix_rhs]
+            vals_at_pctls[:, i,j] = v_lhs + ((pctl - p_lhs) / (p_rhs - p_lhs)) * (v_rhs - v_lhs)
     
 
     return vals_at_pctls

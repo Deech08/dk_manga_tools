@@ -206,10 +206,13 @@ def PCA_stellar_mass(maps = None, dapall=None, plateifu = None, filename = None,
     with fits.open(filename) as pca_data:
         MLi = pca_data["MLi"].data
         log_lum_i = pca_data["LOG_LUM_I"].data
-        mask = pca_data["MASK"].data.astype(bool)
-        goodfrac = pca_data["GOODFRAC"].data[goodfrac_channel]
+        mask = np.logical_or.reduce((
+                ~pca_data["SUCCESS"].data.astype(bool), 
+                pca_data["MASK"].data.astype(bool), 
+                pca_data["GOODFRAC"].data[goodfrac_channel,...] < goodfrac_thresh
+                )
+            )
     m_star = 10**log_lum_i * 10**MLi
-    mask = mask | (goodfrac < goodfrac_thresh )
 
     mask_shaped = np.zeros_like(m_star, dtype = bool)
     if mask_shaped.shape[0] == 3:
@@ -359,8 +362,12 @@ def PCA_zpres_info(name, dapall=None, maps = None, plateifu = None, filename = N
         try:
             info = pca_data[name].data
             if masked:
-                mask = pca_data["MASK"].data.astype(bool)
-                goodfrac = pca_data["GOODFRAC"].data[goodfrac_channel]
+                mask = np.logical_or.reduce((
+                ~pca_data["SUCCESS"].data.astype(bool), 
+                pca_data["MASK"].data.astype(bool), 
+                pca_data["GOODFRAC"].data[goodfrac_channel,...] < goodfrac_thresh
+                )
+            )
         except KeyError:
             info = np.full(pca_data[1].data.shape, np.nan)
 
@@ -370,7 +377,6 @@ def PCA_zpres_info(name, dapall=None, maps = None, plateifu = None, filename = N
                 return info
 
     if masked:
-        mask = mask | (goodfrac < goodfrac_thresh )
         mask_shaped = np.zeros_like(info, dtype = bool)
         if mask_shaped.shape[0] == 3:
             mask_shaped[0,:,:] = mask
